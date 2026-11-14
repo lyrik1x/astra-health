@@ -1,21 +1,20 @@
 import { z } from "zod";
-
-/** Upper bound of a Prisma `Int` (T-005 §1, M-15). */
-export const MAX_DB_INT = 2147483647;
-
-/** ISO 8601 UTC with milliseconds and `Z` only (T-005 §1). */
-const isoDateTime = z.string().datetime({ precision: 3 });
+import { IsoDateTimeSchema, PositiveDbIntSchema } from "./common.js";
 
 /**
- * Persisted configuration of the simulated mission clock (ARCHITECTURE §5.1, T-005 §2.2).
- * `factor` limits are technical, not clinical. T-102 may adjust this schema.
+ * Clock factor: `> 0` and `≤ 3600` (technical limit, not clinical; T-005 §2.2).
+ * In Zod 4, `z.number()` already rejects Infinity and NaN, so it is always finite.
  */
+export const ClockFactorSchema = z.number().gt(0).lte(3600);
+
+/** Persisted configuration of the simulated mission clock (ARCHITECTURE §5.1, T-005 §2.2). */
 export const MissionClockSchema = z
   .object({
-    simEpoch: isoDateTime,
-    realEpoch: isoDateTime,
-    factor: z.number().finite().gt(0).lte(3600),
-    clockVersion: z.number().int().gte(1).lte(MAX_DB_INT),
+    simEpoch: IsoDateTimeSchema,
+    realEpoch: IsoDateTimeSchema,
+    factor: ClockFactorSchema,
+    // 1..MAX_DB_INT, goes up on every re-anchor (technical limit, not clinical).
+    clockVersion: PositiveDbIntSchema,
   })
   .strict();
 
