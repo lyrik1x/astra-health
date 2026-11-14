@@ -1,0 +1,26 @@
+{
+  "name": "astra-health",
+  "private": true,
+  "workspaces": [
+    "packages/contracts",
+    "packages/health-engine",
+    "apps/api",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=26 <27"
+  },
+  "scripts": {
+    "build": "npm run build -w @astra/contracts && npm run build -w @astra/health-engine && npm run build -w @astra/api && npm run build -w @astra/web",
+    "test": "npm run build -w @astra/contracts && npm run build -w @astra/health-engine && npm test -w @astra/contracts && npm test -w @astra/health-engine && npm test -w @astra/api && npm test -w @astra/web",
+    "db:setup": "npm run db:setup -w @astra/api",
+    "db:reset": "npm run db:reset -w @astra/api",
+    "start:api": "npm run start -w @astra/api",
+    "dev:web": "npm run dev -w @astra/web",
+    "preview:web": "npm run preview -w @astra/web"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "typescript": "6.0.3"
+  }
+}

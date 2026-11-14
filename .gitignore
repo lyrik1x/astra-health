@@ -1,0 +1,30 @@
+# Dependencias
+node_modules/
+
+# Salidas de build
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Cliente de Prisma generado
+apps/api/src/generated/
+
+# Variables de entorno (solo se versiona .env.example)
+.env
+.env.*
+!.env.example
+
+# SQLite y respaldos (M-11)
+*.db
+*.db-journal
+*.db*
+*.sqlite
+*.sqlite3
+*.bak
+
+# Registros y sistema
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

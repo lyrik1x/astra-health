@@ -1,0 +1,19 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// T-101 (S3): única tabla inicial. Una sola fila (id = 1). El esquema completo llega con T-104.
+model MissionClock {
+  id           Int      @id @default(1)
+  simEpoch     DateTime
+  realEpoch    DateTime
+  factor       Float
+  clockVersion Int
+}
