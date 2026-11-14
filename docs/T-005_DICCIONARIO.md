@@ -1,7 +1,7 @@
 # T-005 — Diccionario de datos y contratos del MVP (versión reducida del evento)
 
 **Proyecto:** ASTRA HEALTH · **Responsables:** Bruno (decide) y Claude (redacta). Revisa Benito; Lalo revisa los textos visibles (reparto del 14 nov: Sus no asiste).
-**Estado:** BORRADOR 0.1 — 14 nov 2026. **Se congela cuando Bruno aprueba las decisiones de §0.** Después, todo cambio incompatible se coordina con Bruno (AGENTS.md, instrucciones §6.4).
+**Estado:** **CONGELADO 1.0 — 14 nov 2026, 13:06.** Bruno aprobó todas las decisiones de §0, con DEC-6 = opción C. Desde ahora, todo cambio incompatible se coordina con Bruno (AGENTS.md, instrucciones §6.4).
 **Fuentes:** ARCHITECTURE.md §5–§11, PROJECT_SPEC.md §3, §4, §6–§8, y las decisiones ya probadas en el ensayo (BITACORA_ETAPA0, ENSAYO_*). En el repositorio va en `docs/T-005_DICCIONARIO.md`.
 **Regla:** todos los límites de este documento son **técnicos o de formato, nunca clínicos**. Ningún texto los presenta como rangos de salud.
 
@@ -18,7 +18,7 @@ Cada una trae una propuesta. "Aprobado" = se queda como está.
 | DEC-3 | Catálogo de contextos | `AT_REST`, `AFTER_EXERCISE`, `AFTER_WAKING`, `BEFORE_MEAL`, `AFTER_MEAL`; todos válidos para todos los indicadores | Catálogo por indicador |
 | DEC-4 | Escala del estado de ánimo | Entero de 1 a 5, sin unidad, rotulada "self-reported, not clinically validated" | Escala de 1 a 10 |
 | DEC-5 | Estados de sincronización del cliente (corrige M-6) | Tabla de §6.1 | Volver a la definición de ARCHITECTURE §7 |
-| DEC-6 | `astronautId` | Enum cerrado `sam` / `alex` en contracts, más comprobación contra `crew` en el servidor | Solo comprobación en el servidor |
+| DEC-6 | `astronautId` | **APROBADA opción C (híbrida):** formato validado en contracts (`^[a-z0-9-]{1,40}$`), sin lista fija; el servidor rechaza astronautas que no estén en `crew` (`UNKNOWN_ASTRONAUT`); la nave guarda la tripulación de `GET /api/crew` y el formulario solo ofrece esos astronautas. Se agregan astronautas sin cambiar código | (descartadas: A = lista fija en contracts; B = solo servidor) |
 | DEC-7 | `incidentId` en mensajes | Fuera del MVP: los mensajes no se asocian a incidentes | Opcional, validado contra los incidentes del astronauta |
 | DEC-8 | `INVALID` reintentable | Se mantienen tres excepciones a "INVALID es permanente": `SEQUENCE_GAP`, `CREATED_AFTER_ACCEPTANCE` y `UNEXPECTED_ITEM_ERROR` (M-16). Sin tope de reintentos | Solo `SEQUENCE_GAP` |
 | DEC-9 | `reviewEventId` en el cierre `REVIEWED` | Obligatorio (endurecimiento N3b del ensayo) | Cierre basado solo en tiempos |
@@ -48,8 +48,8 @@ Todos los esquemas viven en `packages/contracts`; los tipos se derivan con `z.in
 
 | Campo | Tipo | Regla |
 |---|---|---|
-| `id` | `AstronautId` | `"sam"` o `"alex"` (DEC-6) |
-| `displayName` | string | `"Sam"`, `"Alex"` (ficticios) |
+| `id` | `AstronautId` | Texto de 1 a 40 caracteres: minúsculas, dígitos y guiones (`^[a-z0-9-]{1,40}$`). Sin lista fija en el código (DEC-6 C). La existencia se valida en el servidor contra `crew` |
+| `displayName` | string | 1–60. En el seed: `sam` → "Sam" y `alex` → "Alex" (ficticios) |
 
 ### 2.2 `MissionClock`
 
@@ -288,7 +288,7 @@ Base `astra-health`, `version(1)` con todas las tablas desde el inicio (reposito
 | `incidentEvents` | `id`; único `[incidentId+sequence]`, `incidentId` | `IncidentEvent` + los mismos campos locales |
 | `messages` | `id`; `direction` | `Message` + los mismos campos locales |
 | `outbox` | `id` (= UUID del contenido); `savedAtReal` | `{ id, kind, savedAtReal, attempts, blockedBy? }` |
-| `config` | `key` | Copia de `clock` y `profile`; idioma elegido |
+| `config` | `key` | Copia de `clock`, `profile` y `crew` (tripulación de `GET /api/crew`, DEC-6 C); idioma elegido |
 
 Envío ordenado por `savedAtReal` y, en empate, por `sequence`. Los eventos posteriores a un evento en `SYNC_ERROR` del mismo incidente no se envían y muestran "blocked by rejected event #n".
 
