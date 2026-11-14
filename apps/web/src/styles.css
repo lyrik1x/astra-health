@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/*
+ * T-103: design tokens of ASTRA HEALTH, defined once here.
+ * Tailwind's default palette is disabled on purpose: screens use only these tokens.
+ * Status colors describe data transport, never health values.
+ */
+@theme {
+  --color-*: initial;
+
+  /* Fonts: system stacks only, nothing downloaded (works offline). */
+  --font-sans: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+
+  /* Type scale: 12 / 14 / 16 / 20 / 24 / 32 px (text-xs … text-3xl). */
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 1.25;
+
+  /* Surfaces and text. */
+  --color-canvas: #0b1220;
+  --color-surface: #111a2e;
+  --color-surface-raised: #17223a;
+  --color-border: #2a3754;
+  --color-fg: #e6edf7;
+  --color-fg-muted: #a3b1c6;
+
+  /* Actions and focus. */
+  --color-accent: #5cc8e8;
+  --color-on-accent: #0b1220;
+  --color-focus: #ffd166;
+
+  /* Demo roles (always shown together with the role name). */
+  --color-role-ship: #4fd1c5;
+  --color-role-earth: #a5b4fc;
+
+  /* Transport and sync states (always shown with icon and text). */
+  --color-status-saved: #94a3b8;
+  --color-status-queued: #e3b341;
+  --color-status-confirmed: #6cb6ff;
+  --color-status-transit: #b395f5;
+  --color-status-delivered: #56d364;
+  --color-status-error: #f0886a;
+  --color-status-offline: #8b98ae;
+
+  /* Shape. Spacing keeps Tailwind's 4 px base scale. */
+  --radius-card: 6px;
+  --radius-control: 4px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}

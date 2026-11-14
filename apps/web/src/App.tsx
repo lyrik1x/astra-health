@@ -1,39 +1,47 @@
-import { useEffect, useState } from "react";
-import { engineVersion } from "@astra/health-engine";
-import { fetchHealth } from "./api/health";
-
-// T-101: textos temporales en inglés, sin i18n (llega con T-103).
-type HealthState =
-  | { kind: "loading" }
-  | { kind: "ok"; body: unknown }
-  | { kind: "error"; message: string };
-
-const apiUrl = import.meta.env.VITE_API_URL;
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AppShell } from "./components/AppShell";
+import { DashboardPage } from "./features/dashboard/DashboardPage";
+import { ConsolePage } from "./features/earth-console/ConsolePage";
+import { IncidentPage } from "./features/incident/IncidentPage";
+import { RecordMeasurementPage } from "./features/measurements/RecordMeasurementPage";
+import { MessagesPage } from "./features/messages/MessagesPage";
+import { SECTIONS_BY_ROLE, type SectionId } from "./navigation/sections";
+import { getCurrentRoleResolution } from "./role/demo-role";
 
 export function App() {
-  const [health, setHealth] = useState<HealthState>({ kind: "loading" });
+  const { role, invalidValue } = getCurrentRoleResolution();
+  const sections = SECTIONS_BY_ROLE[role];
+  const [activeSection, setActiveSection] = useState<SectionId>(sections[0] ?? "dashboard");
+  const mainRef = useRef<HTMLElement | null>(null);
+  const isFirstRender = useRef(true);
 
+  // Move focus to the content after a section change, so keyboard users land on it.
   useEffect(() => {
-    if (!apiUrl) {
-      setHealth({ kind: "error", message: "VITE_API_URL is not set (see apps/web/.env.example)" });
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
       return;
     }
-    fetchHealth(apiUrl)
-      .then((body) => setHealth({ kind: "ok", body }))
-      .catch((error: unknown) =>
-        setHealth({ kind: "error", message: error instanceof Error ? error.message : String(error) }),
-      );
-  }, []);
+    mainRef.current?.focus();
+  }, [activeSection]);
+
+  const pages: Record<SectionId, ReactNode> = {
+    dashboard: <DashboardPage onNavigate={setActiveSection} />,
+    recordMeasurement: <RecordMeasurementPage />,
+    incident: <IncidentPage />,
+    messages: <MessagesPage />,
+    console: <ConsolePage />,
+  };
 
   return (
-    <main>
-      <h1>ASTRA HEALTH</h1>
-      <p>Educational prototype. Not a medical device.</p>
-      <h2>API health</h2>
-      {health.kind === "loading" && <p>Checking /api/health…</p>}
-      {health.kind === "ok" && <pre data-testid="health">{JSON.stringify(health.body)}</pre>}
-      {health.kind === "error" && <p role="alert">Error: {health.message}</p>}
-      <p>health-engine version: {engineVersion()}</p>
-    </main>
+    <AppShell
+      role={role}
+      invalidRoleValue={invalidValue}
+      sections={sections}
+      activeSection={activeSection}
+      onSelectSection={setActiveSection}
+      mainRef={mainRef}
+    >
+      {pages[activeSection]}
+    </AppShell>
   );
 }
