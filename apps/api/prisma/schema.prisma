@@ -9,11 +9,109 @@ datasource db {
   provider = "sqlite"
 }
 
-// T-101 (S3): única tabla inicial. Una sola fila (id = 1). El esquema completo llega con T-104.
+// T-104: esquema completo del MVP.
+// Los enums de dominio se guardan como String: su única fuente es Zod en @astra/contracts
+// (se valida al escribir y al leer), así no se duplican catálogos en Prisma.
+// S1: las tablas de contenido solo tienen columnas para consultar y ordenar; la fuente de
+// verdad es `payloadCanonical` (JSON canónico del payload ya validado por Zod).
+// S2′: cada contenido apunta a su Transmission con `transmissionId` obligatorio y único.
+
+// T-101 (S3): una sola fila (id = 1). Sin cambios en T-104.
 model MissionClock {
   id           Int      @id @default(1)
   simEpoch     DateTime
   realEpoch    DateTime
   factor       Float
   clockVersion Int
+}
+
+model Astronaut {
+  id             String          @id // AstronautIdSchema
+  displayName    String
+  measurements   Measurement[]
+  incidentEvents IncidentEvent[]
+  messages       Message[]
+}
+
+model EnvironmentProfile {
+  profile               String // EnvironmentProfileIdSchema (solo MARS_TRANSIT)
+  version               Int
+  oneWayDelayMinutesSim Int
+  delaySource           String // DelaySourceSchema (solo SIMULATED)
+  description           String
+
+  @@id([profile, version])
+}
+
+model Measurement {
+  id               String   @id // UUID del cliente
+  astronautId      String
+  indicator        String
+  unit             String
+  context          String
+  capturedAtReal   DateTime
+  capturedAtSim    DateTime
+  payloadCanonical String // JSON canónico del payload tras MeasurementSchema
+  transmissionId   String   @unique
+
+  astronaut    Astronaut    @relation(fields: [astronautId], references: [id])
+  transmission Transmission @relation(fields: [transmissionId], references: [id])
+
+  @@index([astronautId, capturedAtSim])
+}
+
+model IncidentEvent {
+  id               String   @id // UUID del cliente
+  incidentId       String
+  astronautId      String
+  type             String
+  actor            String
+  sequence         Int? // null solo en EARTH_REVIEW
+  createdAtReal    DateTime
+  createdAtSim     DateTime
+  payloadCanonical String // JSON canónico del payload tras IncidentEventSchema
+  transmissionId   String   @unique
+
+  astronaut    Astronaut    @relation(fields: [astronautId], references: [id])
+  transmission Transmission @relation(fields: [transmissionId], references: [id])
+
+  // En SQLite (y PostgreSQL) los NULL son distintos en un índice único:
+  // varias EARTH_REVIEW con sequence nulo no chocan.
+  @@unique([incidentId, sequence])
+  @@index([astronautId])
+}
+
+model Message {
+  id               String   @id // UUID de quien escribe
+  astronautId      String
+  direction        String
+  createdAtReal    DateTime
+  createdAtSim     DateTime
+  payloadCanonical String // JSON canónico del payload tras MessageSchema
+  transmissionId   String   @unique
+
+  astronaut    Astronaut    @relation(fields: [astronautId], references: [id])
+  transmission Transmission @relation(fields: [transmissionId], references: [id])
+
+  @@index([astronautId, createdAtSim])
+}
+
+model Transmission {
+  id             String   @id // UUID del servidor
+  direction      String
+  contentKind    String // MEASUREMENT | INCIDENT_EVENT | MESSAGE
+  contentId      String
+  acceptedAtReal DateTime
+  acceptedAtSim  DateTime
+  deliverAt      DateTime
+  envProfile     String
+  envVersion     Int
+
+  // Relaciones inversas: campos virtuales de Prisma, no son columnas.
+  measurement   Measurement?
+  incidentEvent IncidentEvent?
+  message       Message?
+
+  @@unique([contentKind, contentId])
+  @@index([deliverAt])
 }

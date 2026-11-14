@@ -1,8 +1,16 @@
+/** Nest injection token for the loaded ApiConfig (provided by AppModule.forRoot). */
+export const API_CONFIG = Symbol("API_CONFIG");
+
 export interface ApiConfig {
   port: number;
   databaseUrl: string;
   corsOrigins: string[];
+  /** Max JSON body size, in body-parser format (e.g. `1mb`). */
+  bodyLimit: string;
 }
+
+/** Body size accepted by body-parser: an integer followed by b, kb or mb (case-insensitive). */
+const BODY_LIMIT_PATTERN = /^\d+(b|kb|mb)$/i;
 
 function requireVar(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name]?.trim();
@@ -28,5 +36,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     throw new Error("CORS_ORIGINS must list at least one origin");
   }
 
-  return { port, databaseUrl: requireVar(env, "DATABASE_URL"), corsOrigins };
+  const bodyLimit = requireVar(env, "BODY_LIMIT");
+  if (!BODY_LIMIT_PATTERN.test(bodyLimit)) {
+    throw new Error(`Invalid BODY_LIMIT: ${bodyLimit} (expected e.g. 1mb, 512kb)`);
+  }
+
+  return { port, databaseUrl: requireVar(env, "DATABASE_URL"), corsOrigins, bodyLimit };
 }

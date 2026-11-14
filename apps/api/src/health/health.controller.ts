@@ -1,10 +1,9 @@
 import { Controller, Get } from "@nestjs/common";
-
-export interface HealthResponse {
-  status: "ok";
-}
+import type { HealthResponse } from "@astra/contracts";
+import { SkipDemoRole } from "../common/demo-role.js";
 
 @Controller("health")
+@SkipDemoRole()
 export class HealthController {
   @Get()
   getHealth(): HealthResponse {
