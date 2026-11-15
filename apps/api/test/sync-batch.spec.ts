@@ -185,7 +185,7 @@ describe("POST /api/sync/batch", () => {
     expect(await db.prisma.measurement.findUnique({ where: { id: m.id } })).toBeNull();
   });
 
-  it("a valid INCIDENT_EVENT or MESSAGE -> INVALID UNEXPECTED_ITEM_ERROR, retryable (T-405/T-505)", async () => {
+  it("a valid MESSAGE -> INVALID UNEXPECTED_ITEM_ERROR, retryable (T-505)", async () => {
     const message = {
       id: randomUUID(),
       direction: "SHIP_TO_EARTH",

@@ -7,7 +7,7 @@ import {
 } from "@astra/contracts";
 import { canonicalJson } from "../common/canonical-json.js";
 import type { PrismaClient } from "../generated/prisma/client.js";
-import { SEED_PROFILE, createSeedMeasurements, seedDeliveryAt } from "./seed-data.js";
+import { SEED_PROFILES, createSeedMeasurements, seedDeliveryAt } from "./seed-data.js";
 
 const CLOCK_ROW_ID = 1;
 const CREW = [
@@ -41,9 +41,13 @@ export async function seedDatabase(prisma: PrismaClient, realNow: Date): Promise
     });
   }
 
-  const profile = EnvironmentProfileSchema.parse(SEED_PROFILE);
-  if ((await prisma.environmentProfile.findUnique({ where: { profile_version: { profile: profile.profile, version: profile.version } } })) === null) {
-    await prisma.environmentProfile.create({ data: profile });
+  // Each version only if missing: an existing version is never overwritten (T-402 Parte 0).
+  for (const seedProfile of SEED_PROFILES) {
+    const profile = EnvironmentProfileSchema.parse(seedProfile);
+    const key = { profile_version: { profile: profile.profile, version: profile.version } };
+    if ((await prisma.environmentProfile.findUnique({ where: key })) === null) {
+      await prisma.environmentProfile.create({ data: profile });
+    }
   }
 
   for (const astronaut of CREW) {

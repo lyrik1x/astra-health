@@ -24,6 +24,8 @@ import {
   type FakeApiHandlers,
 } from "./test-support";
 
+const NO_INCIDENT_EVENTS = { added: 0, updated: 0, mismatched: 0 };
+
 let db: ShipDb;
 beforeEach(() => {
   db = newTestDb();
@@ -264,10 +266,12 @@ describe("syncOnce: reception and config", () => {
       "/api/sync/batch",
       "/api/crew",
       "/api/measurements?astronautId=astro-a",
+      "/api/incidents?astronautId=astro-a",
       "/api/measurements?astronautId=astro-b",
+      "/api/incidents?astronautId=astro-b",
       "/api/mission/config",
     ]);
-    expect(summary).toMatchObject({ crewRefreshed: true, missionConfigRefreshed: true, inbound: { added: 0, updated: 0, mismatched: 0 } });
+    expect(summary).toMatchObject({ crewRefreshed: true, missionConfigRefreshed: true, inbound: { added: 0, updated: 0, mismatched: 0, incidentEvents: NO_INCIDENT_EVENTS } });
     expect(await getLocalCrew(db)).toEqual(crewBody.crew);
     expect(await getLocalMissionConfig(db)).toEqual({ clock: missionConfigBody.clock, profile: missionConfigBody.profile });
   });
@@ -279,7 +283,7 @@ describe("syncOnce: reception and config", () => {
     const summary = await run(fake);
 
     expect(fake.batches).toEqual([]);
-    expect(summary.inbound).toEqual({ added: 1, updated: 0, mismatched: 0 });
+    expect(summary.inbound).toEqual({ added: 1, updated: 0, mismatched: 0, incidentEvents: NO_INCIDENT_EVENTS });
     expect(await db.measurements.get(remote.id)).toMatchObject({ localOrigin: "HYDRATED", syncState: "CONFIRMED" });
   });
 

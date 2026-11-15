@@ -1,5 +1,14 @@
 // Fictitious data and a fake API for the T-203 sync tests only. Not imported by the app.
-import type { Measurement, SyncBatchItem, SyncItemResult, Transmission } from "@astra/contracts";
+import type {
+  ContentKind,
+  IncidentEvent,
+  IncidentEventWithTransmission,
+  IncidentState,
+  Measurement,
+  SyncBatchItem,
+  SyncItemResult,
+  Transmission,
+} from "@astra/contracts";
 import type { FetchLike } from "../api/client";
 import { crewBody, jsonResponse, missionConfigBody } from "../local/test-fixtures";
 import type { LockFn } from "./sync-once";
@@ -7,11 +16,15 @@ import type { LockFn } from "./sync-once";
 export const SERVER_SIM_NOW = "2026-11-14T16:10:00.000Z";
 
 /** Deterministic server transmission for a content id (variant 9: still a valid UUID). */
-export function transmissionFor(contentId: string): Transmission {
+export function transmissionFor(
+  contentId: string,
+  contentKind: ContentKind = "MEASUREMENT",
+  direction: Transmission["direction"] = "SHIP_TO_EARTH",
+): Transmission {
   return {
     id: `00000000-0000-4000-9000-${contentId.slice(-12)}`,
-    direction: "SHIP_TO_EARTH",
-    contentKind: "MEASUREMENT",
+    direction,
+    contentKind,
     contentId,
     acceptedAtReal: "2026-11-14T16:10:00.000Z",
     acceptedAtSim: SERVER_SIM_NOW,
@@ -21,14 +34,14 @@ export function transmissionFor(contentId: string): Transmission {
   };
 }
 
-export function accepted(id: string): SyncItemResult {
-  return { id, kind: "MEASUREMENT", status: "ACCEPTED", code: 201, retryable: false, transmission: transmissionFor(id) };
+export function accepted(id: string, kind: ContentKind = "MEASUREMENT"): SyncItemResult {
+  return { id, kind, status: "ACCEPTED", code: 201, retryable: false, transmission: transmissionFor(id, kind) };
 }
 
-export function conflict(id: string): SyncItemResult {
+export function conflict(id: string, kind: ContentKind = "MEASUREMENT"): SyncItemResult {
   return {
     id,
-    kind: "MEASUREMENT",
+    kind,
     status: "CONFLICT",
     code: 409,
     retryable: false,
@@ -36,13 +49,20 @@ export function conflict(id: string): SyncItemResult {
   };
 }
 
-export function invalid(id: string, error: "UNKNOWN_ASTRONAUT" | "UNEXPECTED_ITEM_ERROR"): SyncItemResult {
+export type FakeInvalidCode =
+  | "UNKNOWN_ASTRONAUT"
+  | "UNEXPECTED_ITEM_ERROR"
+  | "SEQUENCE_GAP"
+  | "INVALID_TRANSITION"
+  | "REVIEW_NOT_DELIVERED";
+
+export function invalid(id: string, error: FakeInvalidCode, kind: ContentKind = "MEASUREMENT"): SyncItemResult {
   return {
     id,
-    kind: "MEASUREMENT",
+    kind,
     status: "INVALID",
     code: 400,
-    retryable: error === "UNEXPECTED_ITEM_ERROR",
+    retryable: error === "UNEXPECTED_ITEM_ERROR" || error === "SEQUENCE_GAP",
     error: { statusCode: 400, error, message: "Fictitious rejection" },
   };
 }
@@ -62,6 +82,28 @@ export function measurementsResponse(measurements: Measurement[]): Response {
   });
 }
 
+/** One event as GET /api/incidents returns it to SHIP. */
+export function incidentEventItem(event: IncidentEvent, transportStatus: "IN_TRANSIT" | "DELIVERED" = "DELIVERED"): IncidentEventWithTransmission {
+  return {
+    event,
+    transmission: transmissionFor(event.id, "INCIDENT_EVENT", event.actor === "SHIP" ? "SHIP_TO_EARTH" : "EARTH_TO_SHIP"),
+    transportStatus,
+  };
+}
+
+/** GET /api/incidents with one incident per group of events (all of the same incident). */
+export function incidentsResponse(groups: { state: IncidentState | null; events: IncidentEvent[] }[]): Response {
+  return jsonResponse({
+    serverSimNow: SERVER_SIM_NOW,
+    incidents: groups.map(({ state, events }) => ({
+      incidentId: events[0]!.incidentId,
+      astronautId: events[0]!.astronautId,
+      state,
+      events: events.map((event) => incidentEventItem(event)),
+    })),
+  });
+}
+
 type MaybeAsync<T> = T | Promise<T>;
 
 export interface FakeApiHandlers {
@@ -69,6 +111,8 @@ export interface FakeApiHandlers {
   batch?: (items: SyncBatchItem[], signal: AbortSignal | null | undefined) => MaybeAsync<Response>;
   /** Default: empty history. */
   measurements?: (astronautId: string) => MaybeAsync<Response>;
+  /** Default: no incidents. */
+  incidents?: (astronautId: string) => MaybeAsync<Response>;
   /** Default: crewBody. */
   crew?: () => MaybeAsync<Response>;
   /** Default: missionConfigBody. */
@@ -99,11 +143,15 @@ export function createFakeApi(handlers: FakeApiHandlers = {}): FakeApi {
       fake.batches.push(items);
       return handlers.batch
         ? handlers.batch(items, init.signal)
-        : batchResponse(items.map((item) => accepted(item.payload.id)));
+        : batchResponse(items.map((item) => accepted(item.payload.id, item.kind)));
     }
     if (url.pathname === "/api/measurements") {
       const astronautId = url.searchParams.get("astronautId") ?? "";
       return handlers.measurements ? handlers.measurements(astronautId) : measurementsResponse([]);
+    }
+    if (url.pathname === "/api/incidents") {
+      const astronautId = url.searchParams.get("astronautId") ?? "";
+      return handlers.incidents ? handlers.incidents(astronautId) : incidentsResponse([]);
     }
     if (url.pathname === "/api/crew") return handlers.crew ? handlers.crew() : jsonResponse(crewBody);
     if (url.pathname === "/api/mission/config") return handlers.config ? handlers.config() : jsonResponse(missionConfigBody);

@@ -8,21 +8,31 @@ import {
   computeSimNow,
   type ContentKind,
   type DemoRole,
-  type EnvironmentProfile,
-  type InvalidItemCode,
+  type IncidentEvent,
   type Measurement,
   type SyncBatchResponse,
   type SyncItemResult,
-  type Transmission,
 } from "@astra/contracts";
 import { canonicalJson } from "../common/canonical-json.js";
 import { NowProvider } from "../common/now-provider.js";
 import { formatZodIssues } from "../common/zod-validation.pipe.js";
+import { IncidentSyncService } from "../incidents/incident-sync.service.js";
 import { MeasurementsRepository } from "../measurements/measurements.repository.js";
 import { toTransmission } from "../measurements/measurements.service.js";
 import { EnvironmentProfileService } from "../missions/environment-profile.service.js";
 import { MissionClockService } from "../missions/mission-clock.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import {
+  accepted,
+  conflict,
+  deliverAtFor,
+  duplicate,
+  invalid,
+  isUniqueViolation,
+  unexpected,
+  type BatchContext,
+  type ItemRef,
+} from "./sync-results.js";
 
 /**
  * Used in a result only when the item has no valid UUID or kind of its own, so the response
@@ -30,35 +40,6 @@ import { PrismaService } from "../prisma/prisma.service.js";
  */
 const UNKNOWN_ITEM_ID = "00000000-0000-0000-0000-000000000000";
 const UNKNOWN_ITEM_KIND: ContentKind = "MEASUREMENT";
-
-const MS_PER_MINUTE = 60_000;
-
-/** The same instant for the whole batch: real now, simulated now and the current profile. */
-interface BatchContext {
-  role: DemoRole;
-  acceptedAtReal: Date;
-  acceptedAtSim: Date;
-  profile: EnvironmentProfile;
-}
-
-interface ItemRef {
-  id: string;
-  kind: ContentKind;
-}
-
-function invalid(ref: ItemRef, error: InvalidItemCode, message: string, retryable = false, details?: string[]): SyncItemResult {
-  return {
-    ...ref,
-    status: "INVALID",
-    code: 400,
-    retryable,
-    error: details === undefined ? { statusCode: 400, error, message } : { statusCode: 400, error, message, details },
-  };
-}
-
-function unexpected(ref: ItemRef, message = "Unexpected error processing this item"): SyncItemResult {
-  return invalid(ref, "UNEXPECTED_ITEM_ERROR", message, true);
-}
 
 /** Best-effort id and kind of a raw item, for its result (the item may be invalid). */
 function refOf(item: unknown): ItemRef {
@@ -71,18 +52,23 @@ function refOf(item: unknown): ItemRef {
   };
 }
 
-/** Prisma unique constraint violation (two sends of the same UUID racing). */
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "P2002";
+/**
+ * Step 2 for incident events (T-402 §4): SHIP sends only ship events (actor SHIP, never
+ * EARTH_REVIEW); EARTH sends only EARTH_REVIEW with actor EARTH. Earth never changes the state.
+ * IncidentEventSchema already ties the actor to the type (Q1), so the actor decides.
+ */
+function incidentEventAllowedFor(role: DemoRole, event: IncidentEvent): boolean {
+  return event.actor === role;
 }
 
-/** POST /api/sync/batch (T-005 §5.2). Only measurements in T-203; events and messages arrive in T-405/T-505. */
+/** POST /api/sync/batch (T-005 §5.2). Measurements (T-203) and incident events (T-405); messages in T-505. */
 @Injectable()
 export class SyncService {
   private readonly logger = new Logger("SyncService");
 
   constructor(
     private readonly measurements: MeasurementsRepository,
+    private readonly incidents: IncidentSyncService,
     private readonly clock: MissionClockService,
     private readonly profiles: EnvironmentProfileService,
     private readonly nowProvider: NowProvider,
@@ -98,7 +84,8 @@ export class SyncService {
     const context: BatchContext = { role, acceptedAtReal: now, acceptedAtSim: new Date(serverSimNow), profile };
 
     // Sequential on purpose: results keep the order of `items`, and a repeated UUID inside
-    // the same batch sees the first one already stored (-> DUPLICATE or CONFLICT).
+    // the same batch sees the first one already stored (-> DUPLICATE or CONFLICT). It also lets
+    // event n+1 of an incident see event n accepted earlier in the same batch.
     const results: SyncItemResult[] = [];
     for (const item of items) {
       results.push(await this.processItemIsolated(item, context));
@@ -124,16 +111,28 @@ export class SyncService {
     }
     const ref: ItemRef = { id: parsed.data.payload.id, kind: parsed.data.kind };
 
-    if (parsed.data.kind !== "MEASUREMENT") {
-      // T-405 / T-505. Retryable, so the client keeps them and resends them later.
-      return unexpected(ref, "Not supported yet");
+    // 2. Role, then the rules of each kind.
+    switch (parsed.data.kind) {
+      case "MEASUREMENT":
+        if (context.role !== "SHIP") {
+          return invalid(ref, "ROLE_NOT_ALLOWED", "Only SHIP can send measurements");
+        }
+        return this.processMeasurement(parsed.data.payload, context);
+      case "INCIDENT_EVENT":
+        if (!incidentEventAllowedFor(context.role, parsed.data.payload)) {
+          return invalid(
+            ref,
+            "ROLE_NOT_ALLOWED",
+            context.role === "SHIP"
+              ? "SHIP sends only ship incident events"
+              : "EARTH sends only EARTH_REVIEW; Earth never changes the incident state",
+          );
+        }
+        return this.incidents.process(parsed.data.payload, context);
+      case "MESSAGE":
+        // T-505. Retryable, so the client keeps them and resends them later.
+        return unexpected(ref, "Not supported yet");
     }
-
-    // 2. Role: MEASUREMENT only from SHIP.
-    if (context.role !== "SHIP") {
-      return invalid(ref, "ROLE_NOT_ALLOWED", "Only SHIP can send measurements");
-    }
-    return this.processMeasurement(parsed.data.payload, context);
   }
 
   private async processMeasurement(measurement: Measurement, context: BatchContext): Promise<SyncItemResult> {
@@ -150,7 +149,6 @@ export class SyncService {
     }
 
     // 5. Accept: measurement + transmission in one write. deliverAt in simulated time (§11).
-    const deliverAt = new Date(context.acceptedAtSim.getTime() + context.profile.oneWayDelayMinutesSim * MS_PER_MINUTE);
     try {
       const row = await this.measurements.createWithTransmission(measurement, {
         id: randomUUID(),
@@ -158,11 +156,11 @@ export class SyncService {
         contentKind: "MEASUREMENT",
         acceptedAtReal: context.acceptedAtReal,
         acceptedAtSim: context.acceptedAtSim,
-        deliverAt,
+        deliverAt: deliverAtFor(context),
         envProfile: context.profile.profile,
         envVersion: context.profile.version,
       });
-      return { ...ref, status: "ACCEPTED", code: 201, retryable: false, transmission: toTransmission(row.transmission) };
+      return accepted(ref, toTransmission(row.transmission));
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
       // Another send of the same UUID won the race: check the UUID again.
@@ -179,15 +177,8 @@ export class SyncService {
 
     const ref: ItemRef = { id: measurement.id, kind: "MEASUREMENT" };
     if (canonicalJson(measurement) === row.payloadCanonical) {
-      const transmission: Transmission = toTransmission(row.transmission);
-      return { ...ref, status: "DUPLICATE", code: 200, retryable: false, transmission };
+      return duplicate(ref, toTransmission(row.transmission));
     }
-    return {
-      ...ref,
-      status: "CONFLICT",
-      code: 409,
-      retryable: false,
-      error: { statusCode: 409, error: "UUID_CONFLICT", message: "Same UUID with different content; not overwritten" },
-    };
+    return conflict(ref, "UUID_CONFLICT", "Same UUID with different content; not overwritten");
   }
 }

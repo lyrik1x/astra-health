@@ -10,6 +10,8 @@ import { T0, crewBody, fakeApi, heartRate, jsonResponse, newTestDb, uuid } from 
 import { receiveInbound } from "./receive-inbound";
 import { createFakeApi, measurementsResponse, transmissionFor } from "./test-support";
 
+const NO_INCIDENT_EVENTS = { added: 0, updated: 0, mismatched: 0 };
+
 const realNow = new Date(T0);
 
 let db: ShipDb;
@@ -37,10 +39,15 @@ describe("receiveInbound", () => {
   it("adds the history as HYDRATED + CONFIRMED records, one request per local astronaut, as SHIP", async () => {
     const fake = history({ "astro-a": [remoteA], "astro-b": [remoteB] });
 
-    expect(await receive(fake)).toEqual({ added: 2, updated: 0, mismatched: 0 });
+    expect(await receive(fake)).toEqual({ added: 2, updated: 0, mismatched: 0, incidentEvents: NO_INCIDENT_EVENTS });
 
-    expect(fake.paths).toEqual(["/api/measurements?astronautId=astro-a", "/api/measurements?astronautId=astro-b"]);
-    expect(fake.roles).toEqual(["SHIP", "SHIP"]);
+    expect(fake.paths).toEqual([
+      "/api/measurements?astronautId=astro-a",
+      "/api/incidents?astronautId=astro-a",
+      "/api/measurements?astronautId=astro-b",
+      "/api/incidents?astronautId=astro-b",
+    ]);
+    expect(fake.roles).toEqual(["SHIP", "SHIP", "SHIP", "SHIP"]);
     expect(await db.measurements.get(remoteA.id)).toEqual({
       ...remoteA,
       syncState: "CONFIRMED",
@@ -57,14 +64,14 @@ describe("receiveInbound", () => {
     await receive(fake);
     const before = await db.measurements.toArray();
 
-    expect(await receive(fake)).toEqual({ added: 0, updated: 2, mismatched: 0 });
+    expect(await receive(fake)).toEqual({ added: 0, updated: 2, mismatched: 0, incidentEvents: NO_INCIDENT_EVENTS });
     expect(await db.measurements.toArray()).toEqual(before);
   });
 
   it("a local pending record with the SAME payload goes to CONFIRMED and its outbox entry is pruned", async () => {
     await saveMeasurementLocal(remoteA, realNow, db);
 
-    expect(await receive(history({ "astro-a": [remoteA] }))).toEqual({ added: 0, updated: 1, mismatched: 0 });
+    expect(await receive(history({ "astro-a": [remoteA] }))).toEqual({ added: 0, updated: 1, mismatched: 0, incidentEvents: NO_INCIDENT_EVENTS });
 
     expect(await db.measurements.get(remoteA.id)).toEqual({
       ...remoteA,
@@ -83,7 +90,7 @@ describe("receiveInbound", () => {
     const before = await db.measurements.get(local.id);
     const outboxBefore = await listOutbox(db);
 
-    expect(await receive(history({ "astro-a": [remoteA] }))).toEqual({ added: 0, updated: 0, mismatched: 1 });
+    expect(await receive(history({ "astro-a": [remoteA] }))).toEqual({ added: 0, updated: 0, mismatched: 1, incidentEvents: NO_INCIDENT_EVENTS });
 
     expect(await db.measurements.get(local.id)).toEqual(before);
     expect(before).toMatchObject({ value: 99, syncState: "SYNC_ERROR" });
@@ -94,7 +101,7 @@ describe("receiveInbound", () => {
     await db.config.clear();
     const fake = history({ "astro-a": [remoteA] });
 
-    expect(await receive(fake)).toEqual({ added: 0, updated: 0, mismatched: 0 });
+    expect(await receive(fake)).toEqual({ added: 0, updated: 0, mismatched: 0, incidentEvents: NO_INCIDENT_EVENTS });
     expect(fake.paths).toEqual([]);
   });
 

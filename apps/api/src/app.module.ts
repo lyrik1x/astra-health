@@ -4,6 +4,7 @@ import { DemoRoleGuard } from "./common/demo-role.js";
 import { NowProvider } from "./common/now-provider.js";
 import { API_CONFIG, type ApiConfig } from "./config.js";
 import { HealthModule } from "./health/health.module.js";
+import { IncidentsModule } from "./incidents/incidents.module.js";
 import { CommunicationsModule } from "./communications/communications.module.js";
 import { CrewModule } from "./crew/crew.module.js";
 import { MeasurementsModule } from "./measurements/measurements.module.js";
@@ -24,6 +25,7 @@ export class AppModule {
         CrewModule,
         MissionsModule,
         MeasurementsModule,
+        IncidentsModule,
         CommunicationsModule,
         ...(config.demoResetEnabled ? [DemoModule] : []),
       ],

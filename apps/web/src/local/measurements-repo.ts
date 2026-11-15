@@ -2,6 +2,7 @@ import Dexie from "dexie";
 import { MeasurementSchema, type Measurement, type MeasurementWithTransmission, type Transmission } from "@astra/contracts";
 import { getShipDb, type ShipDb } from "../db/ship-db";
 import type { LocalMeasurementRecord, OutboxEntry } from "../db/schema";
+import { canonicalJson } from "./canonical-json";
 
 /** A record with the same id is already stored. It is never overwritten. */
 export class LocalRecordExistsError extends Error {
@@ -145,26 +146,6 @@ export async function upsertHydratedMeasurement(
     await db.outbox.delete(incoming.id);
     return "UPDATED";
   });
-}
-
-/**
- * Keys sorted recursively, arrays keep their order: the same rule as the server
- * (apps/api/src/common/canonical-json.ts), applied to payloads already parsed by MeasurementSchema.
- */
-function canonicalJson(value: unknown): string {
-  return JSON.stringify(sortKeys(value));
-}
-
-function sortKeys(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortKeys);
-  if (value !== null && typeof value === "object") {
-    const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(value).sort()) {
-      sorted[key] = sortKeys((value as Record<string, unknown>)[key]);
-    }
-    return sorted;
-  }
-  return value;
 }
 
 function compareMeasurements(a: LocalMeasurementRecord, b: LocalMeasurementRecord): number {

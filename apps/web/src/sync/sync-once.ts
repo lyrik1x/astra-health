@@ -1,7 +1,13 @@
-import { SyncBatchResponseSchema, type SyncBatchItem, type SyncItemResult } from "@astra/contracts";
+import { SyncBatchResponseSchema, type SyncBatchItem, type SyncItemResult, type Transmission } from "@astra/contracts";
 import { apiFetch, type ApiFetch } from "../api/client";
 import { getShipDb, type ShipDb } from "../db/ship-db";
 import { refreshCrew } from "../local/crew-repo";
+import {
+  markIncidentEventConfirmed,
+  markIncidentEventPending,
+  markIncidentEventSyncError,
+  toContractIncidentEvent,
+} from "../local/incidents-repo";
 import {
   markMeasurementConfirmed,
   markMeasurementPending,
@@ -9,7 +15,7 @@ import {
   toContractMeasurement,
 } from "../local/measurements-repo";
 import { refreshMissionConfig } from "../local/mission-config-repo";
-import { listPendingMeasurementOutbox, type PendingMeasurement } from "../local/outbox-repo";
+import { listPendingOutbox, type PendingItem } from "../local/outbox-repo";
 import { receiveInbound, type InboundSummary } from "./receive-inbound";
 
 /** Name of the Web Lock: only one sync at a time (AGENTS.md §7). */
@@ -57,7 +63,8 @@ const webLock: LockFn = (name, callback) => {
 
 /**
  * One sync cycle of the ship (T-203 §4.1), under the `astra-sync` lock:
- * 1. send pending measurements; 2. refreshCrew(); 3. receiveInbound(); 4. refreshMissionConfig().
+ * 1. send pending measurements and incident events (T-405); 2. refreshCrew(); 3. receiveInbound();
+ * 4. refreshMissionConfig().
  * A failure of steps 2-4 keeps the previous local copies. Nothing here deletes domain records:
  * only outbox entries are pruned, and only after CONFIRMED.
  */
@@ -87,7 +94,8 @@ async function runCycle(deps: SyncDeps): Promise<SyncSummary> {
   const { api, db, now, summary, log } = context;
 
   // 1. Send.
-  const pending = await listPendingMeasurementOutbox(db);
+  // By savedAtReal and, inside an incident, by sequence; events blocked by a rejected one are skipped.
+  const pending = await listPendingOutbox(db);
   for (let start = 0; start < pending.length; start += CLIENT_BATCH_SIZE) {
     const stop = await sendBatch(pending.slice(start, start + CLIENT_BATCH_SIZE), context);
     if (stop !== null) {
@@ -116,9 +124,9 @@ async function runCycle(deps: SyncDeps): Promise<SyncSummary> {
  * Sends one batch. Returns null to continue, or the reason to stop the cycle.
  * 413 splits the batch in half; a single item that still gets 413 is a permanent SYNC_ERROR.
  */
-async function sendBatch(batch: PendingMeasurement[], context: CycleContext): Promise<SyncStopReason | null> {
+async function sendBatch(batch: PendingItem[], context: CycleContext): Promise<SyncStopReason | null> {
   const { db, summary, log } = context;
-  const items: SyncBatchItem[] = batch.map(({ record }) => ({ kind: "MEASUREMENT", payload: toContractMeasurement(record) }));
+  const items: SyncBatchItem[] = batch.map(toBatchItem);
 
   let status: number;
   let body: unknown;
@@ -131,7 +139,8 @@ async function sendBatch(batch: PendingMeasurement[], context: CycleContext): Pr
 
   if (status === 413) {
     if (batch.length === 1) {
-      await markMeasurementSyncError(batch[0]!.entry.id, "PAYLOAD_TOO_LARGE: Item is too large for the channel", db);
+      const only = batch[0]!;
+      await markersFor(only.kind).syncError(only.entry.id, "PAYLOAD_TOO_LARGE: Item is too large for the channel", db);
       summary.syncErrors += 1;
       return null;
     }
@@ -162,39 +171,73 @@ async function sendBatch(batch: PendingMeasurement[], context: CycleContext): Pr
 }
 
 /** Results must be in the same order as the items (T-005 §5.2). */
-function sameOrder(results: SyncItemResult[], batch: PendingMeasurement[]): boolean {
+function sameOrder(results: SyncItemResult[], batch: PendingItem[]): boolean {
   return (
     results.length === batch.length &&
-    results.every((result, index) => result.kind === "MEASUREMENT" && result.id === batch[index]!.entry.id)
+    results.every((result, index) => result.kind === batch[index]!.kind && result.id === batch[index]!.entry.id)
   );
 }
 
+/** Only the contract payload travels (no local fields, S2). */
+function toBatchItem(item: PendingItem): SyncBatchItem {
+  return item.kind === "MEASUREMENT"
+    ? { kind: "MEASUREMENT", payload: toContractMeasurement(item.record) }
+    : { kind: "INCIDENT_EVENT", payload: toContractIncidentEvent(item.record) };
+}
+
+/** How each kind applies a result locally (same rules for both, T-203 and T-405). */
+interface ResultMarkers {
+  confirmed: (id: string, transmission: Transmission, db: ShipDb) => Promise<void>;
+  syncError: (id: string, lastError: string, db: ShipDb) => Promise<void>;
+  pending: (id: string, db: ShipDb) => Promise<void>;
+}
+
+const MEASUREMENT_MARKERS: ResultMarkers = {
+  confirmed: markMeasurementConfirmed,
+  syncError: markMeasurementSyncError,
+  pending: markMeasurementPending,
+};
+
+/** A permanent rejection of an event also blocks the later events of its incident. */
+const INCIDENT_EVENT_MARKERS: ResultMarkers = {
+  confirmed: markIncidentEventConfirmed,
+  syncError: markIncidentEventSyncError,
+  pending: markIncidentEventPending,
+};
+
+function markersFor(kind: PendingItem["kind"]): ResultMarkers {
+  return kind === "MEASUREMENT" ? MEASUREMENT_MARKERS : INCIDENT_EVENT_MARKERS;
+}
+
 async function applyResult(result: SyncItemResult, { db, summary }: CycleContext): Promise<void> {
+  // sameOrder already checked that the kind is one of the batch (never MESSAGE here).
+  const markers = markersFor(result.kind === "INCIDENT_EVENT" ? "INCIDENT_EVENT" : "MEASUREMENT");
   switch (result.status) {
     case "ACCEPTED":
     case "DUPLICATE":
-      await markMeasurementConfirmed(result.id, result.transmission, db);
+      await markers.confirmed(result.id, result.transmission, db);
       summary.confirmed += 1;
       return;
     case "CONFLICT":
-      await markMeasurementSyncError(result.id, `${result.error.error}: ${result.error.message}`, db);
+      await markers.syncError(result.id, `${result.error.error}: ${result.error.message}`, db);
       summary.syncErrors += 1;
       return;
     case "INVALID":
+      // Retryable codes (SEQUENCE_GAP, CREATED_AFTER_ACCEPTANCE, UNEXPECTED_ITEM_ERROR) stay pending.
       if (result.retryable) {
-        await markMeasurementPending(result.id, db);
+        await markers.pending(result.id, db);
         summary.stillPending += 1;
       } else {
-        await markMeasurementSyncError(result.id, `${result.error.error}: ${result.error.message}`, db);
+        await markers.syncError(result.id, `${result.error.error}: ${result.error.message}`, db);
         summary.syncErrors += 1;
       }
       return;
   }
 }
 
-async function markAllPending(batch: PendingMeasurement[], { db, summary }: CycleContext): Promise<void> {
-  for (const { entry } of batch) {
-    await markMeasurementPending(entry.id, db);
+async function markAllPending(batch: PendingItem[], { db, summary }: CycleContext): Promise<void> {
+  for (const { kind, entry } of batch) {
+    await markersFor(kind).pending(entry.id, db);
   }
   summary.stillPending += batch.length;
 }

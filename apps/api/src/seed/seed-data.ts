@@ -22,6 +22,22 @@ export const SEED_PROFILE: EnvironmentProfile = EnvironmentProfileSchema.parse({
   description: "Simulated one-way delay (no verified source yet)",
 });
 
+/**
+ * T-402 Parte 0 (decision of Bruno, 14 nov): version 2 of MARS_TRANSIT, 20 simulated minutes.
+ * Still a simulated demo value, inside the real Earth-Mars range published by NASA (T-001).
+ * Version 1 and the seed history keep envVersion 1.
+ */
+export const SEED_PROFILE_V2: EnvironmentProfile = EnvironmentProfileSchema.parse({
+  profile: "MARS_TRANSIT",
+  version: 2,
+  oneWayDelayMinutesSim: 20,
+  delaySource: "SIMULATED",
+  description: "Simulated one-way delay (real Earth-Mars range: 4-24 min, NASA)",
+});
+
+/** Every profile version the seed creates if missing, oldest first. */
+export const SEED_PROFILES: readonly EnvironmentProfile[] = [SEED_PROFILE, SEED_PROFILE_V2];
+
 export interface SeedMeasurement {
   measurement: Measurement;
   transmissionId: string;
