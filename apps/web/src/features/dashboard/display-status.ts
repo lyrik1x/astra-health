@@ -1,6 +1,9 @@
 import { RejectionCodeSchema, computeSimNow, type RejectionCode } from "@astra/contracts";
 import type { DisplayStatus } from "../../components/StatusBadge";
-import type { LocalMeasurementRecord, LocalMissionConfig } from "../../db/schema";
+import type { LocalFields, LocalMissionConfig } from "../../db/schema";
+
+/** Any local record with sync fields (measurement, incident event or message). */
+export type SyncedRecord = Pick<LocalFields, "syncState" | "lastError" | "transmission">;
 
 export interface DisplayBadge {
   status: DisplayStatus;
@@ -21,7 +24,7 @@ function errorCodeOf(lastError: string | undefined): RejectionCode | undefined {
  * Without a local config (or transmission) only "Confirmed by channel" is shown.
  */
 export function displayStatusFor(
-  record: Pick<LocalMeasurementRecord, "syncState" | "lastError" | "transmission">,
+  record: SyncedRecord,
   config: Pick<LocalMissionConfig, "clock"> | null,
   realNow: Date,
 ): DisplayBadge[] {
