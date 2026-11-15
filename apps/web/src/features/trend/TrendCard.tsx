@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Card } from "../../components/ui";
 import type { LocalMeasurementRecord } from "../../db/schema";
@@ -139,9 +139,15 @@ function TrendChart({ trend }: { trend: SeriesTrend }) {
  * T-605: simple trend of one indicator for the selected astronaut. It receives the records the
  * Dashboard already reads every 2 s; it never reads Dexie by itself, so it works offline.
  */
-export function TrendCard({ records }: { records: readonly LocalMeasurementRecord[] }) {
+export interface TrendCardProps {
+  records: readonly LocalMeasurementRecord[];
+  /** T-606b: the Dashboard owns the indicator, so choosing one on the body map changes the trend. */
+  indicator: TrendIndicator;
+  onIndicatorChange: (indicator: TrendIndicator) => void;
+}
+
+export function TrendCard({ records, indicator, onIndicatorChange }: TrendCardProps) {
   const { t } = useTranslation();
-  const [indicator, setIndicator] = useState<TrendIndicator>("HEART_RATE");
   const trend = useMemo(() => buildTrendSeries(records, indicator), [records, indicator]);
 
   return (
@@ -155,7 +161,7 @@ export function TrendCard({ records }: { records: readonly LocalMeasurementRecor
             id="trend-indicator"
             className="min-h-11 w-full max-w-xs rounded-control border border-border bg-surface-raised px-3 text-fg"
             value={indicator}
-            onChange={(event) => setIndicator(event.target.value as TrendIndicator)}
+            onChange={(event) => onIndicatorChange(event.target.value as TrendIndicator)}
           >
             {TREND_INDICATORS.map((item) => (
               <option key={item} value={item}>

@@ -67,6 +67,10 @@ export const en = {
       capturedSim: "Simulated: {{time}}",
       footnote: "Latest recorded values. Body locations are illustrative; no clinical meaning.",
       unavailable: "The body outline could not be shown. The rest of the page still works.",
+      selectHint: "Marker colors show the transmission state of each latest record, not the value. Select one to see its trend.",
+      selectLabel: "{{name}}: {{value}}, {{status}}. Show its trend",
+      selectEmptyLabel: "{{name}}: no records yet",
+      noTrendForMood: "Mood is kept as history only; it has no trend.",
       zones: {
         head: "Head",
         chest: "Chest",

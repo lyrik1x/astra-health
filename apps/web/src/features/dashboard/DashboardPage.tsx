@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Astronaut } from "@astra/contracts";
+import type { Astronaut, Indicator } from "@astra/contracts";
 import { InfoIcon, PencilIcon } from "../../components/icons";
 import { StatusBadge } from "../../components/StatusBadge";
 import { StatusLegend } from "../../components/StatusLegend";
@@ -11,6 +11,7 @@ import { listMeasurementsLocal } from "../../local/measurements-repo";
 import { getLocalMissionConfig } from "../../local/mission-config-repo";
 import type { SectionId } from "../../navigation/sections";
 import { BodyMap } from "../body-map/BodyMap";
+import { INITIAL_SELECTION, selectIndicator, type IndicatorSelection } from "../body-map/indicator-selection";
 import { loadSelectedAstronaut, resolveAstronautId, saveSelectedAstronaut } from "../../role/selected-astronaut";
 import { CONTEXTS, getIndicatorDefinition } from "../measurements/indicators";
 import { TrendCard } from "../trend/TrendCard";
@@ -63,6 +64,9 @@ export function DashboardPage({ onNavigate }: { onNavigate: (section: SectionId)
   const [selectedId, setSelectedId] = useState<string>("");
   const [data, setData] = useState<DashboardData | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  // T-606b: the indicator chosen on the body map (or in the trend selector) also drives the trend.
+  const [selection, setSelection] = useState<IndicatorSelection>(INITIAL_SELECTION);
+  const choose = (indicator: Indicator) => setSelection((current) => selectIndicator(current, indicator));
 
   useEffect(() => {
     let active = true;
@@ -145,13 +149,22 @@ export function DashboardPage({ onNavigate }: { onNavigate: (section: SectionId)
                 ))}
               </ul>
             )}
-            <BodyMap records={data.records} formatValue={formatMeasurementValue} />
+            <BodyMap
+              records={data.records}
+              formatValue={formatMeasurementValue}
+              config={data.config}
+              realNow={data.realNow}
+              selectedIndicator={selection.selected}
+              onSelectIndicator={choose}
+            />
           </div>
         )}
       </Card>
 
       {/* T-605: same 2 s read as the list above; the card never reads Dexie by itself. */}
-      {!loadFailed && data !== null && crew !== null && <TrendCard records={data.records} />}
+      {!loadFailed && data !== null && crew !== null && (
+        <TrendCard records={data.records} indicator={selection.trend} onIndicatorChange={choose} />
+      )}
 
       <StatusLegend />
     </div>

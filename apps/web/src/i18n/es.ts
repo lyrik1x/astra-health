@@ -72,6 +72,10 @@ export const es: typeof en = {
       capturedSim: "Simulado: {{time}}",
       footnote: "Últimos valores registrados. Las ubicaciones del cuerpo son ilustrativas; sin significado clínico.",
       unavailable: "No se pudo mostrar la silueta del cuerpo. El resto de la página sigue funcionando.",
+      selectHint: "El color de cada marcador muestra el estado de transmisión de su último registro, no el valor. Selecciona uno para ver su tendencia.",
+      selectLabel: "{{name}}: {{value}}, {{status}}. Mostrar su tendencia",
+      selectEmptyLabel: "{{name}}: todavía no hay registros",
+      noTrendForMood: "El estado de ánimo se guarda solo como historial; no tiene tendencia.",
       zones: {
         head: "Cabeza",
         chest: "Pecho",
