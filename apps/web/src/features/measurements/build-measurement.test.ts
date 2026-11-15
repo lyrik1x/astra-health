@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MeasurementSchema, computeSimNow, type Indicator } from "@astra/contracts";
 import { buildMeasurement, type MeasurementValue } from "./build-measurement";
-import { devMissionConfig } from "./dev-fixtures";
+import { testMissionConfig as devMissionConfig } from "./test-mission-config";
 
 const REAL_NOW = new Date("2026-11-14T10:30:00.000Z");
 const FIXED_ID = "11111111-1111-4111-8111-111111111111";

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Indicator } from "@astra/contracts";
 import { en } from "../../i18n/en";
 import { buildMeasurement } from "./build-measurement";
-import { devMissionConfig } from "./dev-fixtures";
+import { testMissionConfig as devMissionConfig } from "./test-mission-config";
 import {
   ERROR_KEYS,
   parseFormValue,
