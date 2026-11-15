@@ -1,4 +1,6 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ComponentType, ReactNode } from "react";
+import type { IconProps } from "./icons";
+import { Reveal } from "./motion";
 
 /** Shared building blocks so later screens reuse the same card and button styles. */
 
@@ -24,11 +26,34 @@ export function Button({ variant = "primary", className = "", type = "button", .
   );
 }
 
+/** T-711: the card enters softly once, when it mounts (never on the periodic data reads). */
 export function Card({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <section className="rounded-card border border-border bg-surface p-4 md:p-6">
+    <Reveal as="section" className="rounded-card border border-border bg-surface p-4 shadow-lg shadow-canvas/40 md:p-6">
       {title && <h2 className="mb-3 text-xl font-semibold">{title}</h2>}
       {children}
-    </section>
+    </Reveal>
+  );
+}
+
+interface PageHeaderProps {
+  title: string;
+  description: string;
+  icon: ComponentType<IconProps>;
+}
+
+/** T-711: common page title (section icon, title, description and a thin accent rule). */
+export function PageHeader({ title, description, icon: Icon }: PageHeaderProps) {
+  return (
+    <header>
+      <div className="flex items-center gap-3">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-card border border-border bg-surface-raised text-accent">
+          <Icon className="size-5" />
+        </span>
+        <h1 className="min-w-0 text-2xl font-semibold break-words md:text-3xl">{title}</h1>
+      </div>
+      <div className="title-rule mt-3 h-px w-full max-w-md" aria-hidden="true" />
+      <p className="mt-2 text-fg-muted">{description}</p>
+    </header>
   );
 }

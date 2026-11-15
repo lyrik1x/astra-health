@@ -60,3 +60,54 @@
     outline-offset: 2px;
   }
 }
+
+/*
+ * T-711: visual pass. Decorative only: nothing here depends on a measured value or a status.
+ * Every animation lives inside `prefers-reduced-motion: no-preference`.
+ */
+@layer components {
+  /* Header: still star field over a soft surface → canvas gradient. No images are downloaded. */
+  .header-starfield {
+    --star: color-mix(in srgb, var(--color-fg) 45%, transparent);
+    --star-faint: color-mix(in srgb, var(--color-fg) 25%, transparent);
+    background-color: var(--color-surface);
+    background-image:
+      radial-gradient(1px 1px at 8% 30%, var(--star), transparent 70%),
+      radial-gradient(1px 1px at 21% 78%, var(--star-faint), transparent 70%),
+      radial-gradient(1.5px 1.5px at 34% 18%, var(--star-faint), transparent 70%),
+      radial-gradient(1px 1px at 47% 64%, var(--star), transparent 70%),
+      radial-gradient(1px 1px at 58% 26%, var(--star-faint), transparent 70%),
+      radial-gradient(1.5px 1.5px at 69% 82%, var(--star), transparent 70%),
+      radial-gradient(1px 1px at 81% 40%, var(--star-faint), transparent 70%),
+      radial-gradient(1px 1px at 93% 70%, var(--star), transparent 70%),
+      radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 60%),
+      linear-gradient(180deg, var(--color-surface) 0%, var(--color-canvas) 100%);
+  }
+
+  /* Thin accent rule under page titles. */
+  .title-rule {
+    background-image: linear-gradient(90deg, var(--color-accent), transparent);
+  }
+}
+
+@keyframes signal-arc {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .signal-arc {
+    animation: signal-arc 2.4s ease-in-out infinite;
+  }
+  .signal-arc-2 {
+    animation-delay: 0.3s;
+  }
+  .signal-arc-3 {
+    animation-delay: 0.6s;
+  }
+}

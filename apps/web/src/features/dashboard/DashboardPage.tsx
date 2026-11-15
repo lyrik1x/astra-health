@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Astronaut, Indicator } from "@astra/contracts";
-import { InfoIcon, PencilIcon } from "../../components/icons";
+import { GridIcon, InfoIcon, PencilIcon } from "../../components/icons";
+import { Reveal } from "../../components/motion";
 import { StatusBadge } from "../../components/StatusBadge";
 import { StatusLegend } from "../../components/StatusLegend";
-import { Button, Card } from "../../components/ui";
+import { Button, Card, PageHeader } from "../../components/ui";
 import type { LocalMeasurementRecord, LocalMissionConfig } from "../../db/schema";
 import { getLocalCrew } from "../../local/crew-repo";
 import { listMeasurementsLocal } from "../../local/measurements-repo";
@@ -37,15 +38,19 @@ function MeasurementRow({ record, config, realNow }: { record: LocalMeasurementR
   const definition = getIndicatorDefinition(record.indicator);
   const badges = displayStatusFor(record, config, realNow);
   return (
-    <li className="flex flex-col gap-2 rounded-control border border-border p-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex flex-col gap-0.5">
-        <p className="font-medium">
-          {t(definition.labelKey)}:{" "}
-          <span className="font-mono">{formatMeasurementValue(record.indicator, record.value)}</span>{" "}
-          <span className="text-fg-muted">{t(definition.unitLabelKey)}</span>
+    // T-711: same layout and size for every value; only new rows (new id) play the soft entry.
+    <Reveal
+      as="li"
+      className="flex flex-col gap-3 rounded-control border border-border bg-surface-raised/40 p-3 sm:flex-row sm:items-start sm:justify-between"
+    >
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="text-xs font-semibold tracking-wider break-words text-fg-muted uppercase">{t(definition.labelKey)}</p>
+        <p className="flex flex-wrap items-baseline gap-x-1.5">
+          <span className="font-mono text-2xl font-semibold">{formatMeasurementValue(record.indicator, record.value)}</span>
+          <span className="text-sm text-fg-muted">{t(definition.unitLabelKey)}</span>
         </p>
         <p className="text-sm text-fg-muted">{t(contextLabelKey(record.context))}</p>
-        <p className="text-sm">{t("pages.dashboard.capturedSim", { time: formatUtcMinute(record.capturedAtSim) })}</p>
+        <p className="text-sm text-fg-muted">{t("pages.dashboard.capturedSim", { time: formatUtcMinute(record.capturedAtSim) })}</p>
         <p className="text-xs text-fg-muted">{t("pages.dashboard.capturedReal", { time: formatUtcMinute(record.capturedAtReal) })}</p>
       </div>
       <ul className="flex flex-wrap gap-2" aria-label={t("pages.dashboard.statusLabel")}>
@@ -55,7 +60,7 @@ function MeasurementRow({ record, config, realNow }: { record: LocalMeasurementR
           </li>
         ))}
       </ul>
-    </li>
+    </Reveal>
   );
 }
 
@@ -97,10 +102,7 @@ export function DashboardPage({ onNavigate }: { onNavigate: (section: SectionId)
 
   return (
     <div className="flex flex-col gap-4">
-      <header>
-        <h1 className="text-2xl font-semibold md:text-3xl">{t("pages.dashboard.title")}</h1>
-        <p className="mt-1 text-fg-muted">{t("pages.dashboard.description")}</p>
-      </header>
+      <PageHeader icon={GridIcon} title={t("pages.dashboard.title")} description={t("pages.dashboard.description")} />
 
       <div>
         <Button onClick={() => onNavigate("recordMeasurement")}>

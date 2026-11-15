@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckIcon } from "./icons";
+import { SignalIcon } from "./icons";
 import { StatusBadge } from "./StatusBadge";
 
 function readOnline(): boolean {
@@ -31,7 +31,8 @@ export function LinkStatus() {
       <span className="font-semibold">{t("app.link.label")}:</span>
       {online ? (
         <>
-          <CheckIcon className="size-4" />
+          {/* T-711: signal arcs (CSS pulse, off with reduced motion). Same online state as before. */}
+          <SignalIcon className="size-4 text-accent" />
           <span>{t("app.link.online")}</span>
         </>
       ) : (

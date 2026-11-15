@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Astronaut } from "@astra/contracts";
-import { CrossCircleIcon, InfoIcon } from "../../components/icons";
-import { Button, Card } from "../../components/ui";
+import { ClipboardIcon, CrossCircleIcon, InfoIcon } from "../../components/icons";
+import { Button, Card, PageHeader } from "../../components/ui";
 import type { LocalMissionConfig } from "../../db/schema";
 import { getLocalCrew } from "../../local/crew-repo";
 import {
@@ -165,10 +165,7 @@ export function IncidentPage({ onChanged }: IncidentPageProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <header>
-        <h1 className="text-2xl font-semibold md:text-3xl">{t("pages.incident.title")}</h1>
-        <p className="mt-1 text-fg-muted">{t("pages.incident.description")}</p>
-      </header>
+      <PageHeader icon={ClipboardIcon} title={t("pages.incident.title")} description={t("pages.incident.description")} />
 
       <Card title={t("pages.incident.currentTitle")}>
         {loadFailed && <p className="text-sm text-fg-muted">{t("pages.incident.loadError")}</p>}

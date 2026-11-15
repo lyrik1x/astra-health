@@ -6,7 +6,8 @@ import { ApiStatus } from "./ApiStatus";
 import { DemoRoleSwitch } from "./DemoRoleSwitch";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { ResetDemoButton } from "./ResetDemoButton";
-import { ChatIcon, ClipboardIcon, ConsoleIcon, EarthIcon, GridIcon, PencilIcon, ShipIcon, type IconProps } from "./icons";
+import { ChatIcon, ClipboardIcon, ConsoleIcon, EarthIcon, GridIcon, LogoMark, PencilIcon, ShipIcon, type IconProps } from "./icons";
+import { Reveal } from "./motion";
 import { SafetyBanner } from "./SafetyBanner";
 
 const SECTION_ICONS: Record<SectionId, ComponentType<IconProps>> = {
@@ -38,9 +39,11 @@ function NavList({ sections, active, onSelect, layout }: NavListProps) {
               type="button"
               onClick={() => onSelect(section)}
               aria-current={current ? "page" : undefined}
-              className={`flex w-full min-h-11 items-center rounded-control text-sm font-medium ${
-                isTabs ? "flex-col justify-center gap-0.5 px-1 py-1.5 text-xs" : "gap-3 px-3"
-              } ${current ? "bg-surface-raised text-accent" : "text-fg hover:bg-surface-raised"}`}
+              className={`relative flex w-full min-h-11 items-center rounded-control text-sm font-medium motion-safe:transition-colors before:absolute before:rounded-full before:bg-accent before:opacity-0 motion-safe:before:transition-opacity ${
+                isTabs
+                  ? "flex-col justify-center gap-0.5 px-1 py-1.5 text-xs before:inset-x-3 before:top-0 before:h-0.5"
+                  : "gap-3 px-3 before:inset-y-2 before:left-0 before:w-0.5"
+              } ${current ? "bg-surface-raised text-accent before:opacity-100" : "text-fg hover:bg-surface-raised"}`}
             >
               <Icon className="size-5" />
               <span className={current ? "underline decoration-2 underline-offset-4" : undefined}>
@@ -87,10 +90,13 @@ export function AppShell(props: AppShellProps) {
         <SafetyBanner />
       </div>
 
-      <header className="border-b border-border bg-surface">
+      <header className="header-starfield border-b border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-mono text-lg font-bold tracking-widest">{t("app.name")}</span>
+            <span className="flex items-center gap-2">
+              <LogoMark className="size-7" />
+              <span className="font-mono text-lg font-bold tracking-widest">{t("app.name")}</span>
+            </span>
             <span className={`inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-sm ${roleTagClass}`}>
               <RoleIcon className="size-4" />
               {t("demoRole.viewTag", { role: roleName })}
@@ -98,9 +104,12 @@ export function AppShell(props: AppShellProps) {
             <ApiStatus />
             {linkStatus}
           </div>
-          <DemoRoleSwitch role={role} />
-          <LanguageSwitch />
-          <ResetDemoButton />
+          {/* T-711: the demo controls wrap together, so the header keeps a tidy second row. */}
+          <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+            <DemoRoleSwitch role={role} />
+            <LanguageSwitch />
+            <ResetDemoButton />
+          </div>
         </div>
         {invalidRoleValue !== undefined && (
           <p role="note" className="mx-auto flex max-w-6xl items-center gap-2 px-4 pb-3 text-sm text-status-queued">
@@ -114,7 +123,10 @@ export function AppShell(props: AppShellProps) {
           <NavList sections={sections} active={activeSection} onSelect={onSelectSection} layout="sidebar" />
         </nav>
         <main id="main" ref={mainRef} tabIndex={-1} className="min-w-0 flex-1 p-4 pb-28 focus:outline-none md:p-6">
-          {children}
+          {/* T-711: soft fade when the section changes; the focus move in App.tsx is unchanged. */}
+          <Reveal key={activeSection} kind="fade">
+            {children}
+          </Reveal>
         </main>
       </div>
 

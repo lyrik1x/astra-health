@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { InfoIcon } from "../../components/icons";
+import { ConsoleIcon, InfoIcon } from "../../components/icons";
 import { StatusLegend } from "../../components/StatusLegend";
-import { Card } from "../../components/ui";
+import { Card, PageHeader } from "../../components/ui";
 import { IncidentCard } from "./IncidentCard";
 import { MeasurementList } from "./MeasurementList";
 import { useConsoleData } from "./use-console-data";
@@ -19,10 +19,7 @@ export function ConsolePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <header>
-        <h1 className="text-2xl font-semibold md:text-3xl">{t("pages.console.title")}</h1>
-        <p className="mt-1 text-fg-muted">{t("pages.console.description")}</p>
-      </header>
+      <PageHeader icon={ConsoleIcon} title={t("pages.console.title")} description={t("pages.console.description")} />
 
       {apiError && (
         <p role="status" className="flex items-center gap-1.5 text-sm text-fg-muted">
