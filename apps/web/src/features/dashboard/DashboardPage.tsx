@@ -10,6 +10,7 @@ import { getLocalCrew } from "../../local/crew-repo";
 import { listMeasurementsLocal } from "../../local/measurements-repo";
 import { getLocalMissionConfig } from "../../local/mission-config-repo";
 import type { SectionId } from "../../navigation/sections";
+import { BodyMap } from "../body-map/BodyMap";
 import { CONTEXTS, getIndicatorDefinition } from "../measurements/indicators";
 import { displayStatusFor } from "./display-status";
 import { formatMeasurementValue, formatUtcMinute } from "./format-value";
@@ -139,6 +140,7 @@ export function DashboardPage({ onNavigate }: { onNavigate: (section: SectionId)
                 ))}
               </ul>
             )}
+            <BodyMap records={data.records} formatValue={formatMeasurementValue} />
           </div>
         )}
       </Card>

@@ -59,6 +59,21 @@ export const en = {
       statusLabel: "Status",
       unknownContext: "Unknown context",
     },
+    bodyMap: {
+      title: "Latest values",
+      figureLabel: "Front-facing body outline showing the latest recorded value of each indicator",
+      listLabel: "Latest recorded values by body location",
+      empty: "No records yet",
+      capturedSim: "Simulated: {{time}}",
+      footnote: "Latest recorded values. Body locations are illustrative; no clinical meaning.",
+      unavailable: "The body outline could not be shown. The rest of the page still works.",
+      zones: {
+        head: "Head",
+        chest: "Chest",
+        torso: "Torso",
+        arm: "Arm",
+      },
+    },
     recordMeasurement: {
       title: "Record measurement",
       description: "Manual entry of a measurement with fictional data.",
