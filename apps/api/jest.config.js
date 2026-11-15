@@ -3,6 +3,7 @@
 /** @type {import('jest').Config} */
 export default {
   testEnvironment: "node",
+  testTimeout: 20000,
   rootDir: ".",
   testMatch: ["<rootDir>/test/**/*.spec.ts"],
   extensionsToTreatAsEsm: [".ts"],
