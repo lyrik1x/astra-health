@@ -12,6 +12,7 @@
   "dependencies": {
     "@astra/contracts": "*",
     "@astra/health-engine": "*",
+    "dexie": "4.4.7",
     "i18next": "26.7.2",
     "react": "19.3.1",
     "react-dom": "19.3.1",
@@ -22,6 +23,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.3.0",
+    "fake-indexeddb": "6.2.7",
     "tailwindcss": "4.3.3",
     "vite": "8.3.8",
     "vitest": "5.1.0"
