@@ -5,10 +5,11 @@ import {
   formatMeasurementValue,
   formatSimTime,
   ownReviews,
+  reportNote,
   shipEvents,
   sortMeasurements,
 } from "./console-model";
-import { incident, measurementItem, reviewEvent, shipEvent } from "./test-fixtures";
+import { incident, measurementItem, reportWithNote, reviewEvent, shipEvent } from "./test-fixtures";
 
 describe("test fixtures", () => {
   it("follow the shared contracts", () => {
@@ -55,6 +56,20 @@ describe("incident helpers", () => {
 
     expect(ownReviews(target).map((review) => review.transportStatus)).toEqual(["IN_TRANSIT", "DELIVERED"]);
     expect(shipEvents(target)).toEqual([opened, report]);
+  });
+});
+
+describe("reportNote", () => {
+  it("returns the note of a REPORT_SUBMITTED as written", () => {
+    const report = reportWithNote("Fictitious note\nsecond line");
+    expect(IncidentsResponseSchema.safeParse({ serverSimNow: "2031-03-01T00:10:00.000Z", incidents: [incident("AWAITING_REVIEW", [shipEvent("INCIDENT_OPENED", 1), report])] }).success).toBe(true);
+    expect(reportNote(report.event)).toBe("Fictitious note\nsecond line");
+  });
+
+  it("returns undefined when the report has no note, and for other events", () => {
+    expect(reportNote(shipEvent("REPORT_SUBMITTED", 2).event)).toBeUndefined();
+    expect(reportNote(shipEvent("INCIDENT_OPENED", 1).event)).toBeUndefined();
+    expect(reportNote(reviewEvent("DELIVERED").event)).toBeUndefined();
   });
 });
 

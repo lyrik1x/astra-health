@@ -1,5 +1,6 @@
 import type {
   EarthReviewEvent,
+  IncidentEvent,
   IncidentEventWithTransmission,
   MeasurementWithTransmission,
   ProjectedIncident,
@@ -49,6 +50,11 @@ function sequenceOf(item: IncidentEventWithTransmission): number {
 /** Ship events visible to Earth (the API only returns delivered ones), in `sequence` order. */
 export function shipEvents(incident: ProjectedIncident): IncidentEventWithTransmission[] {
   return incident.events.filter((item) => item.event.type !== "EARTH_REVIEW").sort((a, b) => sequenceOf(a) - sequenceOf(b));
+}
+
+/** The note of a REPORT_SUBMITTED, as the ship wrote it; `undefined` for other events or without a note. */
+export function reportNote(event: IncidentEvent): string | undefined {
+  return event.type === "REPORT_SUBMITTED" ? event.data.note : undefined;
 }
 
 function pad(value: number): string {

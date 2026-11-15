@@ -93,6 +93,13 @@ export function shipEvent(
   return { event, transmission: transmissionFor("INCIDENT_EVENT", event.id, "SHIP_TO_EARTH"), transportStatus };
 }
 
+/** A delivered REPORT_SUBMITTED with a fictitious note. */
+export function reportWithNote(note: string, sequence = 2): IncidentEventWithTransmission {
+  const base = shipEvent("REPORT_SUBMITTED", sequence);
+  const event: IncidentEvent = { ...base.event, type: "REPORT_SUBMITTED", actor: "SHIP", sequence, data: { note } };
+  return { ...base, event };
+}
+
 export function reviewEvent(transportStatus: TransportStatus): IncidentEventWithTransmission {
   const event: IncidentEvent = {
     id: uuid(),

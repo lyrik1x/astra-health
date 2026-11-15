@@ -3,7 +3,7 @@ import type { ProjectedIncident } from "@astra/contracts";
 import { ClipboardIcon } from "../../components/icons";
 import { Reveal } from "../../components/motion";
 import { StatusBadge } from "../../components/StatusBadge";
-import { deliveredReport, formatSimTime, ownReviews, shipEvents } from "./console-model";
+import { deliveredReport, formatSimTime, ownReviews, reportNote, shipEvents } from "./console-model";
 import { canReview } from "./earth-review";
 import { EVENT_TYPE_KEYS, STATE_KEYS, UNKNOWN_STATE_KEY } from "./labels";
 import { ReviewForm } from "./ReviewForm";
@@ -48,12 +48,18 @@ export function IncidentCard({ incident, onReviewSent }: IncidentCardProps) {
 
       <h4 className="mt-3 text-sm font-semibold">{t("pages.console.incidents.events")}</h4>
       <ol className="mt-1 flex flex-col gap-1 text-sm">
-        {events.map(({ event }) => (
-          <li key={event.id} className="flex flex-wrap justify-between gap-2">
-            <span>{t(EVENT_TYPE_KEYS[event.type])}</span>
-            <span className="text-fg-muted">{formatSimTime(event.createdAtSim)}</span>
-          </li>
-        ))}
+        {events.map(({ event }) => {
+          const note = reportNote(event);
+          return (
+            <li key={event.id} className="flex flex-col gap-1">
+              <div className="flex flex-wrap justify-between gap-2">
+                <span>{t(EVENT_TYPE_KEYS[event.type])}</span>
+                <span className="text-fg-muted">{formatSimTime(event.createdAtSim)}</span>
+              </div>
+              {note !== undefined && <p className="whitespace-pre-wrap break-words">{note}</p>}
+            </li>
+          );
+        })}
       </ol>
 
       {reviews.length > 0 && (
