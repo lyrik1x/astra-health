@@ -64,6 +64,21 @@ export const es: typeof en = {
       statusLabel: "Estado",
       unknownContext: "Contexto desconocido",
     },
+    bodyMap: {
+      title: "Últimos valores",
+      figureLabel: "Silueta del cuerpo vista de frente con el último valor registrado de cada indicador",
+      listLabel: "Últimos valores registrados por ubicación del cuerpo",
+      empty: "Todavía no hay registros",
+      capturedSim: "Simulado: {{time}}",
+      footnote: "Últimos valores registrados. Las ubicaciones del cuerpo son ilustrativas; sin significado clínico.",
+      unavailable: "No se pudo mostrar la silueta del cuerpo. El resto de la página sigue funcionando.",
+      zones: {
+        head: "Cabeza",
+        chest: "Pecho",
+        torso: "Torso",
+        arm: "Brazo",
+      },
+    },
     recordMeasurement: {
       title: "Registrar medición",
       description: "Captura manual de una medición con datos ficticios.",

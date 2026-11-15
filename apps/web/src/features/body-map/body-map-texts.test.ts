@@ -1,11 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
+import { es } from "../../i18n/es";
 
 /**
- * Words the body map must never show (T-606 §3.4, D-29). Easy to extend:
- * add one word per entry (for example the Spanish ones when es.ts exists).
+ * Words the body map must never show (T-606 §3.4, D-29), in English and Spanish.
+ * Easy to extend: add one word per entry.
  */
-const FORBIDDEN_WORDS: readonly string[] = ["normal", "abnormal", "high", "low", "risk", "alert", "warning", "danger"];
+const FORBIDDEN_WORDS: readonly string[] = [
+  "normal",
+  "abnormal",
+  "high",
+  "low",
+  "risk",
+  "alert",
+  "warning",
+  "danger",
+  "anormal",
+  "riesgo",
+  "alerta",
+  "peligro",
+  "alto",
+  "bajo",
+];
 
 /** Whole words only, ignoring case, so "below" or "follow" do not count as "low". */
 function forbiddenWordsIn(text: string): string[] {
@@ -25,10 +41,13 @@ describe("pages.bodyMap texts", () => {
     expect(forbiddenWordsIn("shown below, follow the list")).toEqual([]);
   });
 
-  it("contains none of the forbidden words", () => {
-    const texts = allStrings(en.pages.bodyMap);
-    expect(texts.length).toBeGreaterThan(0);
-    for (const text of texts) {
+  it.each([
+    ["en", en],
+    ["es", es],
+  ])("contains none of the forbidden words (%s)", (_language, texts) => {
+    const strings = allStrings(texts.pages.bodyMap);
+    expect(strings.length).toBeGreaterThan(0);
+    for (const text of strings) {
       expect(forbiddenWordsIn(text), text).toEqual([]);
     }
   });
