@@ -16,3 +16,14 @@ describe("loadConfig BODY_LIMIT", () => {
     expect(() => loadConfig({ ...TEST_ENV, BODY_LIMIT: value })).toThrow("Invalid BODY_LIMIT");
   });
 });
+
+describe("loadConfig DEMO_RESET_ENABLED", () => {
+  it('enables the reset route only for the exact value "true"', () => {
+    expect(loadConfig({ ...TEST_ENV, DEMO_RESET_ENABLED: "true" }).demoResetEnabled).toBe(true);
+    for (const value of ["TRUE", "1", "false"]) {
+      expect(loadConfig({ ...TEST_ENV, DEMO_RESET_ENABLED: value }).demoResetEnabled).toBe(false);
+    }
+    const { DEMO_RESET_ENABLED: _omitted, ...env } = { ...TEST_ENV, DEMO_RESET_ENABLED: undefined };
+    expect(loadConfig(env).demoResetEnabled).toBe(false);
+  });
+});

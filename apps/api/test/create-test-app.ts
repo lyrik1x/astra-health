@@ -17,7 +17,7 @@ export const TEST_ENV = {
 
 export interface TestAppOptions {
   /** Overrides of TEST_ENV (e.g. a temp DATABASE_URL or a small BODY_LIMIT). */
-  env?: Partial<typeof TEST_ENV>;
+  env?: NodeJS.ProcessEnv;
   /** Test-only controllers (e.g. ProbeController). Never part of AppModule. */
   controllers?: Type[];
   /** Replacement for NowProvider, to control the real "now". */

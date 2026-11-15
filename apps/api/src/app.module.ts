@@ -9,6 +9,7 @@ import { CrewModule } from "./crew/crew.module.js";
 import { MeasurementsModule } from "./measurements/measurements.module.js";
 import { MissionsModule } from "./missions/missions.module.js";
 import { PrismaModule } from "./prisma/prisma.module.js";
+import { DemoModule } from "./demo/demo.module.js";
 
 @Module({})
 export class AppModule {
@@ -17,7 +18,15 @@ export class AppModule {
     return {
       module: AppModule,
       global: true,
-      imports: [PrismaModule, HealthModule, CrewModule, MissionsModule, MeasurementsModule, CommunicationsModule],
+      imports: [
+        PrismaModule,
+        HealthModule,
+        CrewModule,
+        MissionsModule,
+        MeasurementsModule,
+        CommunicationsModule,
+        ...(config.demoResetEnabled ? [DemoModule] : []),
+      ],
       providers: [
         { provide: API_CONFIG, useValue: config },
         NowProvider,

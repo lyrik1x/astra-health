@@ -7,6 +7,8 @@ export interface ApiConfig {
   corsOrigins: string[];
   /** Max JSON body size, in body-parser format (e.g. `1mb`). */
   bodyLimit: string;
+  /** Demo data reset endpoint; disabled unless explicitly set to "true". */
+  demoResetEnabled: boolean;
 }
 
 /** Body size accepted by body-parser: an integer followed by b, kb or mb (case-insensitive). */
@@ -41,5 +43,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     throw new Error(`Invalid BODY_LIMIT: ${bodyLimit} (expected e.g. 1mb, 512kb)`);
   }
 
-  return { port, databaseUrl: requireVar(env, "DATABASE_URL"), corsOrigins, bodyLimit };
+  // Optional: only the exact value "true" enables the destructive demo reset route.
+  const demoResetEnabled = env.DEMO_RESET_ENABLED === "true";
+
+  return { port, databaseUrl: requireVar(env, "DATABASE_URL"), corsOrigins, bodyLimit, demoResetEnabled };
 }
