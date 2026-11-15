@@ -4,6 +4,7 @@ import { DemoRoleGuard } from "./common/demo-role.js";
 import { NowProvider } from "./common/now-provider.js";
 import { API_CONFIG, type ApiConfig } from "./config.js";
 import { HealthModule } from "./health/health.module.js";
+import { CrewModule } from "./crew/crew.module.js";
 import { MeasurementsModule } from "./measurements/measurements.module.js";
 import { MissionsModule } from "./missions/missions.module.js";
 import { PrismaModule } from "./prisma/prisma.module.js";
@@ -15,7 +16,7 @@ export class AppModule {
     return {
       module: AppModule,
       global: true,
-      imports: [PrismaModule, HealthModule, MissionsModule, MeasurementsModule],
+      imports: [PrismaModule, HealthModule, CrewModule, MissionsModule, MeasurementsModule],
       providers: [
         { provide: API_CONFIG, useValue: config },
         NowProvider,
