@@ -1,5 +1,5 @@
-/** Languages with complete texts. English only in the MVP; Spanish arrives in Phase 2. */
-export const SUPPORTED_LANGUAGES = ["en"] as const;
+/** Languages with complete texts. English is the default and official language; Spanish is an extra (D-45). */
+export const SUPPORTED_LANGUAGES = ["en", "es"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 export const DEFAULT_LANGUAGE: SupportedLanguage = "en";
 

@@ -30,6 +30,12 @@ export const en = {
     running: "Resetting the demo…",
     failed: "The demo was not reset. Nothing was deleted on this device. Reason: {{reason}}",
   },
+  // Language names stay in their own language in both locales.
+  language: {
+    label: "Language",
+    en: "English",
+    es: "Español",
+  },
   nav: {
     label: "Sections",
     dashboard: "Dashboard",

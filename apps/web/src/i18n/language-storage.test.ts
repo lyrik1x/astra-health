@@ -27,8 +27,14 @@ describe("language storage", () => {
     const storage = memoryStorage();
     expect(saveLanguage("es", storage)).toBe(true);
     expect(storage.data.get(LANGUAGE_STORAGE_KEY)).toBe("es");
-    // Spanish is not supported yet; a future supported list restores it.
+    // A custom supported list is honored as well as the default one.
     expect(loadLanguage(storage, ["en", "es"])).toBe("es");
+  });
+
+  it("restores a saved Spanish choice with the default supported list (QA-603)", () => {
+    const storage = memoryStorage();
+    storage.data.set(LANGUAGE_STORAGE_KEY, "es");
+    expect(loadLanguage(storage)).toBe("es");
   });
 
   it("falls back to English for an unsupported or missing value", () => {
@@ -56,6 +62,23 @@ describe("createAppI18n", () => {
     storage.data.clear();
     await i18n.changeLanguage("en");
     expect(storage.data.get(LANGUAGE_STORAGE_KEY)).toBe("en");
+  });
+
+  it("keeps Spanish across a reload (QA-603)", async () => {
+    const storage = memoryStorage();
+    const first = createAppI18n(storage);
+    await first.changeLanguage("es");
+    expect(storage.data.get(LANGUAGE_STORAGE_KEY)).toBe("es");
+
+    // A new instance stands in for the page reload.
+    const reloaded = createAppI18n(storage);
+    expect(reloaded.language).toBe("es");
+    expect(reloaded.t("nav.messages")).toBe("Mensajes");
+  });
+
+  it("starts in English when nothing is saved", () => {
+    const i18n = createAppI18n(memoryStorage());
+    expect(i18n.language).toBe("en");
   });
 
   it("works when storage is broken", () => {
