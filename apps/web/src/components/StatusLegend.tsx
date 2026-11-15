@@ -11,7 +11,11 @@ export function StatusLegend() {
       <ul className="flex flex-wrap gap-2">
         {DISPLAY_STATUSES.map((status) => (
           <li key={status}>
-            <StatusBadge status={status} errorCode={status === "SYNC_ERROR" ? "UUID_CONFLICT" : undefined} />
+            <StatusBadge
+              status={status}
+              errorCode={status === "SYNC_ERROR" ? "UUID_CONFLICT" : undefined}
+              isExample={status === "SYNC_ERROR"}
+            />
           </li>
         ))}
       </ul>

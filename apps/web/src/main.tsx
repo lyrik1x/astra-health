@@ -3,7 +3,10 @@ import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { App } from "./App";
 import { createAppI18n } from "./i18n";
+import { normalizeRoleInUrl } from "./role/demo-role";
 import "./styles.css";
+
+normalizeRoleInUrl();
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {

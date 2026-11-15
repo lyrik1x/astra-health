@@ -32,6 +32,27 @@ export function buildRoleSearch(currentSearch: string, role: DemoRole): string {
   return `?${params.toString()}`;
 }
 
+/**
+ * Canonical query string when the URL names an invalid role (`?role=admin` → `?role=ship`),
+ * keeping any other parameters. Returns null when nothing needs rewriting.
+ */
+export function canonicalRoleSearch(search: string): string | null {
+  const resolution = resolveDemoRole(search);
+  if (resolution.invalidValue === undefined) {
+    return null;
+  }
+  return buildRoleSearch(search, resolution.role);
+}
+
+/** Rewrites an invalid ?role= in the address bar, without reloading or adding a history entry. */
+export function normalizeRoleInUrl(): void {
+  const { pathname, search, hash } = window.location;
+  const canonical = canonicalRoleSearch(search);
+  if (canonical !== null) {
+    window.history.replaceState(window.history.state, "", `${pathname}${canonical}${hash}`);
+  }
+}
+
 let currentResolution: RoleResolution | undefined;
 
 /**

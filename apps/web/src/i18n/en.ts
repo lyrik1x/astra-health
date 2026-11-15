@@ -108,6 +108,7 @@ export const en = {
     DELIVERED: "Delivered",
     SYNC_ERROR: "Sync error",
     SYNC_ERROR_withCode: "Sync error: {{code}}",
+    SYNC_ERROR_example: "Sync error: {{code}} (example)",
     OFFLINE: "Offline",
   },
   api: {
