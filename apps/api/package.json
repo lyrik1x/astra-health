@@ -8,7 +8,8 @@
     "start": "node --env-file-if-exists=.env dist/main.js",
     "test": "prisma generate && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js",
     "db:generate": "prisma generate",
-    "db:setup": "prisma migrate deploy",
+    "db:setup": "prisma migrate deploy && npm run db:seed",
+    "db:seed": "npm run build --workspace=@astra/contracts && npm run build && node --env-file-if-exists=.env dist/seed/run.js",
     "db:reset": "prisma migrate reset --force"
   },
   "dependencies": {
