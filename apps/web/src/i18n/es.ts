@@ -64,6 +64,19 @@ export const es: typeof en = {
       statusLabel: "Estado",
       unknownContext: "Contexto desconocido",
     },
+    // --- T-605 ---
+    trend: {
+      title: "Tendencia",
+      indicatorLabel: "Indicador",
+      footer: "Sus propios registros a lo largo del tiempo simulado de la misión. No se muestran rangos clínicos.",
+      empty: "Todavía no hay suficientes registros para una tendencia.",
+      summary: "{{indicator}}: {{count}} registros, de {{min}} a {{max}} {{unit}}.",
+      showData: "Mostrar datos",
+      columnTime: "Tiempo simulado (UTC)",
+      columnValue: "Valor ({{unit}})",
+      systolic: "Sistólica",
+      diastolic: "Diastólica",
+    },
     recordMeasurement: {
       title: "Registrar medición",
       description: "Captura manual de una medición con datos ficticios.",

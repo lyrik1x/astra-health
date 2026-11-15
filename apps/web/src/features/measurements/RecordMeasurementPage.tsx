@@ -14,6 +14,7 @@ import {
 } from "../../local/measurements-repo";
 import { EvaluationPanel } from "../evaluation/EvaluationPanel";
 import { getLocalMissionConfig } from "../../local/mission-config-repo";
+import { loadSelectedAstronaut, resolveAstronautId, saveSelectedAstronaut } from "../../role/selected-astronaut";
 import { validateMeasurementForm, type FieldErrors, type FieldName, type MeasurementFormValues } from "./form-validation";
 import { CONTEXTS, DEFAULT_CONTEXT, INDICATORS, MOOD_VALUES, getIndicatorDefinition } from "./indicators";
 
@@ -114,7 +115,7 @@ export function RecordMeasurementPage({ onSaved }: RecordMeasurementPageProps) {
             return;
           }
           setLoad({ status: "ready", crew, config });
-          setValues((current) => ({ ...current, astronautId: current.astronautId || (crew[0]?.id ?? "") }));
+          setValues((current) => ({ ...current, astronautId: current.astronautId || resolveAstronautId(loadSelectedAstronaut(), crew) }));
         })
         .catch((error: unknown) => {
           console.error("Could not read local mission data", error);
@@ -236,7 +237,10 @@ export function RecordMeasurementPage({ onSaved }: RecordMeasurementPageProps) {
                   value={values.astronautId}
                   aria-invalid={Boolean(errors.astronautId)}
                   aria-describedby={describedBy("astronautId")}
-                  onChange={(event) => update({ astronautId: event.target.value })}
+                  onChange={(event) => {
+                    update({ astronautId: event.target.value });
+                    saveSelectedAstronaut(event.target.value);
+                  }}
                 >
                   {load.crew.map((astronaut) => (
                     <option key={astronaut.id} value={astronaut.id}>

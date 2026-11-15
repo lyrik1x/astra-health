@@ -59,6 +59,19 @@ export const en = {
       statusLabel: "Status",
       unknownContext: "Unknown context",
     },
+    // --- T-605 ---
+    trend: {
+      title: "Trend",
+      indicatorLabel: "Indicator",
+      footer: "Your own records over simulated mission time. No clinical ranges are shown.",
+      empty: "Not enough records for a trend yet.",
+      summary: "{{indicator}}: {{count}} records, from {{min}} to {{max}} {{unit}}.",
+      showData: "Show data",
+      columnTime: "Simulated time (UTC)",
+      columnValue: "Value ({{unit}})",
+      systolic: "Systolic",
+      diastolic: "Diastolic",
+    },
     recordMeasurement: {
       title: "Record measurement",
       description: "Manual entry of a measurement with fictional data.",
