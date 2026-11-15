@@ -38,6 +38,16 @@ export interface ClinicalEvaluation {
   rulesVersion: "none";
 }
 
+/**
+ * Ordinal (code-unit) string comparison, independent of the system locale (T-709, D-49).
+ * Returns -1, 0 or 1.
+ */
+function compareOrdinal(a: string, b: string): number {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
 export function evaluatePersonal(
   target: Measurement,
   history: readonly Measurement[],
@@ -53,9 +63,9 @@ export function evaluatePersonal(
     )
     .slice()
     .sort((left, right) =>
-      left.capturedAtSim.localeCompare(right.capturedAtSim) ||
-      left.capturedAtReal.localeCompare(right.capturedAtReal) ||
-      left.id.localeCompare(right.id),
+      compareOrdinal(left.capturedAtSim, right.capturedAtSim) ||
+      compareOrdinal(left.capturedAtReal, right.capturedAtReal) ||
+      compareOrdinal(left.id, right.id),
     )
     .slice(-7);
 
