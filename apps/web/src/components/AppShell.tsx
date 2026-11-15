@@ -4,6 +4,7 @@ import type { DemoRole } from "@astra/contracts";
 import { SECTION_LABEL_KEYS, type SectionId } from "../navigation/sections";
 import { ApiStatus } from "./ApiStatus";
 import { DemoRoleSwitch } from "./DemoRoleSwitch";
+import { ResetDemoButton } from "./ResetDemoButton";
 import { ChatIcon, ClipboardIcon, ConsoleIcon, EarthIcon, GridIcon, PencilIcon, ShipIcon, type IconProps } from "./icons";
 import { SafetyBanner } from "./SafetyBanner";
 
@@ -97,6 +98,7 @@ export function AppShell(props: AppShellProps) {
             {linkStatus}
           </div>
           <DemoRoleSwitch role={role} />
+          <ResetDemoButton />
         </div>
         {invalidRoleValue !== undefined && (
           <p role="note" className="mx-auto flex max-w-6xl items-center gap-2 px-4 pb-3 text-sm text-status-queued">

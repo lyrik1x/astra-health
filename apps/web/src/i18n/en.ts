@@ -22,6 +22,14 @@ export const en = {
     viewTag: "{{role}} view",
     invalid: "Unknown role “{{value}}” in the URL. Showing the default view: {{role}}.",
   },
+  demoReset: {
+    button: "Reset demo",
+    note: "Demo only — deletes the fictional demo data on this device and on the server",
+    confirm: "Confirm reset",
+    cancel: "Cancel",
+    running: "Resetting the demo…",
+    failed: "The demo was not reset. Nothing was deleted on this device. Reason: {{reason}}",
+  },
   nav: {
     label: "Sections",
     dashboard: "Dashboard",
@@ -64,6 +72,7 @@ export const en = {
       noCrew: "No crew members are available.",
       noMissionData: "Connect once to download mission data",
       captured: "It will be sent automatically when the link is available.",
+      historyError: "The measurement is saved. The personal comparison could not be shown because the local history could not be read.",
       indicators: {
         HEART_RATE: "Heart rate",
         BODY_TEMPERATURE: "Body temperature",

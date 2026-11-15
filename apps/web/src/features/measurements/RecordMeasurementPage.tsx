@@ -1,12 +1,18 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { Astronaut, Indicator, MeasurementContext } from "@astra/contracts";
+import type { Astronaut, Indicator, Measurement, MeasurementContext } from "@astra/contracts";
 import { CrossCircleIcon, InfoIcon } from "../../components/icons";
 import { StatusBadge } from "../../components/StatusBadge";
 import { Button, Card } from "../../components/ui";
 import type { LocalMissionConfig } from "../../db/schema";
 import { getLocalCrew } from "../../local/crew-repo";
-import { LocalRecordExistsError, saveMeasurementLocal } from "../../local/measurements-repo";
+import {
+  LocalRecordExistsError,
+  listMeasurementsLocal,
+  saveMeasurementLocal,
+  toContractMeasurement,
+} from "../../local/measurements-repo";
+import { EvaluationPanel } from "../evaluation/EvaluationPanel";
 import { getLocalMissionConfig } from "../../local/mission-config-repo";
 import { validateMeasurementForm, type FieldErrors, type FieldName, type MeasurementFormValues } from "./form-validation";
 import { CONTEXTS, DEFAULT_CONTEXT, INDICATORS, MOOD_VALUES, getIndicatorDefinition } from "./indicators";
@@ -17,6 +23,16 @@ type LoadState =
   /** Crew or mission config was never downloaded (no connection yet). */
   | { status: "noMissionData" }
   | { status: "ready"; crew: Astronaut[]; config: LocalMissionConfig };
+
+/**
+ * The last measurement saved on this page. `history` stays null while it is read;
+ * `historyError` only hides the comparison: the measurement itself is already saved.
+ */
+interface LastSaved {
+  measurement: Measurement;
+  history: Measurement[] | null;
+  historyError: boolean;
+}
 
 /** While there is no local mission data yet, the form checks again with this period. */
 const NO_DATA_RETRY_MS = 2_000;
@@ -81,7 +97,7 @@ export function RecordMeasurementPage({ onSaved }: RecordMeasurementPageProps) {
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [values, setValues] = useState<MeasurementFormValues>(emptyValues("", "HEART_RATE", DEFAULT_CONTEXT));
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [captured, setCaptured] = useState(false);
+  const [lastSaved, setLastSaved] = useState<LastSaved | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Local data only (downloaded by syncOnce). Without it, check again until the first sync lands.
@@ -117,7 +133,8 @@ export function RecordMeasurementPage({ onSaved }: RecordMeasurementPageProps) {
 
   function update(patch: Partial<MeasurementFormValues>) {
     setValues((current) => ({ ...current, ...patch }));
-    setCaptured(false);
+    // Any new input (astronaut, indicator, context or value) hides the "captured" message and the panel.
+    setLastSaved(null);
   }
 
   function describedBy(field: FieldName, extra?: string): string | undefined {
@@ -133,7 +150,7 @@ export function RecordMeasurementPage({ onSaved }: RecordMeasurementPageProps) {
     const result = validateMeasurementForm(values, load.config, realNow, () => crypto.randomUUID());
     if (!result.ok) {
       setErrors(result.errors);
-      setCaptured(false);
+      setLastSaved(null);
       const firstField = (Object.keys(FIELD_IDS) as Array<keyof typeof FIELD_IDS>).find((field) => result.errors[field]);
       if (firstField) document.getElementById(FIELD_IDS[firstField])?.focus();
       return;
@@ -143,8 +160,11 @@ export function RecordMeasurementPage({ onSaved }: RecordMeasurementPageProps) {
       await saveMeasurementLocal(result.measurement, realNow);
       setErrors({});
       setValues(emptyValues(values.astronautId, values.indicator, values.context));
-      setCaptured(true);
+      // result.measurement is already the contract payload validated by Zod.
+      const measurement = result.measurement;
+      setLastSaved({ measurement, history: null, historyError: false });
       onSaved?.();
+      void loadHistory(measurement);
     } catch (error) {
       // What was typed is kept, so the astronaut can try again.
       console.error("Could not save the measurement on the device", error);
@@ -157,6 +177,22 @@ export function RecordMeasurementPage({ onSaved }: RecordMeasurementPageProps) {
     } finally {
       setSaving(false);
     }
+  }
+
+  /** Reads the local history for the panel. A failure never touches the saved measurement. */
+  async function loadHistory(measurement: Measurement) {
+    let next: Pick<LastSaved, "history" | "historyError">;
+    try {
+      const records = await listMeasurementsLocal(measurement.astronautId);
+      // The saved measurement is excluded by id so it is not compared with itself.
+      const history = records.map(toContractMeasurement).filter((record) => record.id !== measurement.id);
+      next = { history, historyError: false };
+    } catch (error) {
+      console.error("Could not read the local history for the comparison", error);
+      next = { history: null, historyError: true };
+    }
+    // Only if no other measurement was started in the meantime.
+    setLastSaved((current) => (current?.measurement.id === measurement.id ? { ...current, ...next } : current));
   }
 
   return (
@@ -347,16 +383,24 @@ export function RecordMeasurementPage({ onSaved }: RecordMeasurementPageProps) {
             </div>
 
             <div role="status" aria-live="polite">
-              {captured && (
+              {lastSaved && (
                 <p className="flex flex-wrap items-center gap-2 text-sm text-fg">
                   <StatusBadge status="SAVED_LOCAL" />
                   <span>{t("pages.recordMeasurement.captured")}</span>
+                </p>
+              )}
+              {lastSaved?.historyError && (
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-fg-muted">
+                  <InfoIcon className="size-4 shrink-0" />
+                  <span>{t("pages.recordMeasurement.historyError")}</span>
                 </p>
               )}
             </div>
           </form>
         )}
       </Card>
+
+      {lastSaved?.history && <EvaluationPanel measurement={lastSaved.measurement} history={lastSaved.history} />}
     </div>
   );
 }

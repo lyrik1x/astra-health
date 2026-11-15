@@ -33,7 +33,7 @@ describe("evaluateForDisplay", () => {
 
     expect(result.personal.status).toBe("COMPUTED");
     expect(component).toMatchObject({ median: 70.5, absoluteDifference: 9.5, percentDifference: expect.closeTo(13.4751773, 5) });
-    expect(formatComparisonValues(component, "bpm")).toEqual({ difference: "+9.5", median: "71", percentage: "+13.5%" });
+    expect(formatComparisonValues(component, "bpm")).toEqual({ difference: "+9.5", median: "70.5", percentage: "+13.5%" });
     expect(result.usedMeasurements.map(({ id }) => id)).toEqual(history.map(({ id }) => id));
   });
 
@@ -71,10 +71,11 @@ describe("evaluateForDisplay", () => {
 
 describe("evaluation formatting", () => {
   it("rounds medians according to T-005 §3.1 and differences to one signed decimal", () => {
-    expect(formatMedian(70.5, "bpm")).toBe("71");
+    expect(formatMedian(70.5, "bpm")).toBe("70.5");
+    expect(formatMedian(70, "bpm")).toBe("70");
     expect(formatMedian(36.65, "degC")).toBe("36.6");
-    expect(formatMedian(99.5, "mg_dL")).toBe("100");
-    expect(formatMedian(120.5, "mmHg")).toBe("121");
+    expect(formatMedian(99.5, "mg_dL")).toBe("99.5");
+    expect(formatMedian(120.5, "mmHg")).toBe("120.5");
     expect(formatMedian(7.25, "h")).toBe("7.3");
     expect(formatSignedDifference(9.49)).toBe("+9.5");
     expect(formatSignedDifference(-9.49)).toBe("-9.5");
@@ -96,7 +97,7 @@ describe("evaluation formatting", () => {
     const copy = Object.values(en.pages.evaluation).filter((value): value is string => typeof value === "string");
     const generated = [
       ...copy,
-      "+9.5 bpm (+13.5%) compared with your personal median of 71 bpm",
+      "+9.5 bpm (+13.5%) compared with your personal median of 70.5 bpm",
       "+2.0 bpm compared with your personal median of 0 bpm; percentage not available (median is 0)",
       "Not enough comparable history (2 of 3 records needed)",
       "Mood is shown as history only; no comparison is made",

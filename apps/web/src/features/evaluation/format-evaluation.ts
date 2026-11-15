@@ -2,7 +2,7 @@ import type { Unit } from "@astra/contracts";
 import type { ComponentResult } from "@astra/health-engine";
 
 export function formatMedian(value: number, unit: Unit): string {
-  const decimals = unit === "degC" || unit === "h" ? 1 : 0;
+  const decimals = unit === "degC" || unit === "h" || !Number.isInteger(value) ? 1 : 0;
   return value.toFixed(decimals);
 }
 
