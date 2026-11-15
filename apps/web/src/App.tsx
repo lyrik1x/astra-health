@@ -59,7 +59,7 @@ export function App() {
   const pages: Record<SectionId, ReactNode> = {
     dashboard: <DashboardPage onNavigate={setActiveSection} />,
     recordMeasurement: <RecordMeasurementPage onSaved={requestSync} />,
-    incident: <IncidentPage />,
+    incident: <IncidentPage onChanged={requestSync} />,
     messages: <MessagesPage />,
     console: <ConsolePage />,
   };
