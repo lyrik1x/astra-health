@@ -14,6 +14,7 @@
     "@astra/health-engine": "*",
     "dexie": "4.4.7",
     "i18next": "26.7.2",
+    "motion": "14.8.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-i18next": "17.1.13"

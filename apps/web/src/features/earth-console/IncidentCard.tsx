@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { ProjectedIncident } from "@astra/contracts";
 import { ClipboardIcon } from "../../components/icons";
+import { Reveal } from "../../components/motion";
 import { StatusBadge } from "../../components/StatusBadge";
 import { deliveredReport, formatSimTime, ownReviews, shipEvents } from "./console-model";
 import { canReview } from "./earth-review";
@@ -32,15 +33,17 @@ export function IncidentCard({ incident, onReviewSent }: IncidentCardProps) {
 
       {report && (
         // Neutral highlight (accent, icon and text), never a medical alarm color.
-        <div role="status" className="mt-3 flex items-start gap-2 rounded-control border-2 border-accent bg-surface p-3">
-          <ClipboardIcon className="mt-0.5 size-5 shrink-0 text-accent" />
-          <div>
-            <p className="font-semibold">{t("pages.console.incidents.alertTitle")}</p>
-            <p className="text-sm text-fg-muted">
-              {t("pages.console.incidents.alertDelivered", { time: formatSimTime(report.transmission.deliverAt) })}
-            </p>
+        <Reveal className="mt-3">
+          <div role="status" className="flex items-start gap-2 rounded-control border-2 border-accent bg-surface p-3">
+            <ClipboardIcon className="mt-0.5 size-5 shrink-0 text-accent" />
+            <div>
+              <p className="font-semibold">{t("pages.console.incidents.alertTitle")}</p>
+              <p className="text-sm text-fg-muted">
+                {t("pages.console.incidents.alertDelivered", { time: formatSimTime(report.transmission.deliverAt) })}
+              </p>
+            </div>
           </div>
-        </div>
+        </Reveal>
       )}
 
       <h4 className="mt-3 text-sm font-semibold">{t("pages.console.incidents.events")}</h4>

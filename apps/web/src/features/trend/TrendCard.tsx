@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { Reveal } from "../../components/motion";
 import { Card } from "../../components/ui";
 import type { LocalMeasurementRecord } from "../../db/schema";
 import { formatMeasurementValue, formatUtcMinute } from "../dashboard/format-value";
@@ -170,11 +171,14 @@ export function TrendCard({ records, indicator, onIndicatorChange }: TrendCardPr
             ))}
           </select>
         </div>
-        {trend.kind === "empty" ? (
-          <p className="text-sm text-fg-muted">{t("pages.trend.empty")}</p>
-        ) : (
-          <TrendChart trend={trend} />
-        )}
+        {/* T-711: fades in again only when the indicator changes, never on the 2 s data reads. */}
+        <Reveal key={indicator} kind="fade">
+          {trend.kind === "empty" ? (
+            <p className="text-sm text-fg-muted">{t("pages.trend.empty")}</p>
+          ) : (
+            <TrendChart trend={trend} />
+          )}
+        </Reveal>
         <p className="text-xs text-fg-muted">{t("pages.trend.footer")}</p>
       </div>
     </Card>

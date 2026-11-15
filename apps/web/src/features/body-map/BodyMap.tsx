@@ -1,6 +1,9 @@
 import { Component, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { Indicator } from "@astra/contracts";
+import { m } from "motion/react";
+import { usePrefersReducedMotion } from "../../components/motion";
+import { transitWaveMotion } from "../../components/motion-presets";
 import { StatusBadge, type DisplayStatus } from "../../components/StatusBadge";
 import type { LocalMeasurementRecord, LocalMissionConfig } from "../../db/schema";
 import { formatUtcMinute } from "../dashboard/format-value";
@@ -97,19 +100,21 @@ function selectableProps(view: IndicatorView, selected: boolean, onSelect: (indi
 function Marker({ view, selected, onSelect }: { view: IndicatorView; selected: boolean; onSelect: (indicator: Indicator) => void }) {
   const { x, y } = INDICATOR_PLACEMENTS[view.indicator].marker;
   const status: DisplayStatus | undefined = view.state?.status;
+  const wave = transitWaveMotion(usePrefersReducedMotion());
   return (
     <g {...selectableProps(view, selected, onSelect)}>
       {/* Invisible touch area (24 units), larger than the visible dot. */}
       <circle cx={x} cy={y} r={MARKER_HIT_RADIUS} fill="transparent" />
-      {status === "IN_TRANSIT" && (
-        // Expanding wave only while in transit; without motion preference it is a still dot under the marker.
-        <circle
+      {status === "IN_TRANSIT" && wave && (
+        // T-711: soft expanding wave only while in transit (same status as before); none with reduced motion.
+        <m.circle
           cx={x}
           cy={y}
           r={MARKER_RADIUS}
           fill={view.color}
-          className="origin-center [transform-box:fill-box] motion-safe:animate-ping"
+          className="origin-center [transform-box:fill-box]"
           aria-hidden="true"
+          {...wave}
         />
       )}
       {status === undefined ? (

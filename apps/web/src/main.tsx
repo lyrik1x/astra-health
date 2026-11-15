@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { App } from "./App";
+import { MotionProvider } from "./components/motion";
 import { createAppI18n } from "./i18n";
 import { normalizeRoleInUrl } from "./role/demo-role";
 import "./styles.css";
@@ -19,7 +20,9 @@ document.documentElement.lang = i18n.language;
 createRoot(rootElement).render(
   <StrictMode>
     <I18nextProvider i18n={i18n}>
-      <App />
+      <MotionProvider>
+        <App />
+      </MotionProvider>
     </I18nextProvider>
   </StrictMode>,
 );

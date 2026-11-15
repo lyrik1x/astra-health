@@ -126,3 +126,25 @@ export const EarthIcon = (p: IconProps) => (
     <path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z" />
   </Svg>
 );
+
+/** T-711: brand mark of the header, a planet with an orbit. Decorative; the name sits next to it. */
+export const LogoMark = ({ className = "size-7" }: IconProps) => (
+  <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false" className={`shrink-0 ${className}`}>
+    <ellipse cx="16" cy="16" rx="14" ry="6" transform="rotate(-24 16 16)" stroke="var(--color-accent)" strokeWidth={1.5} opacity={0.7} />
+    <circle cx="16" cy="16" r="6.5" fill="var(--color-accent)" />
+    <circle cx="27.5" cy="10.5" r="1.8" fill="var(--color-fg)" />
+  </svg>
+);
+
+/**
+ * T-711: link signal (ship antenna with arcs). The arcs pulse with the `signal-arc` CSS class,
+ * only when the user has no reduced-motion preference. It shows the existing online state only.
+ */
+export const SignalIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="18" r="1.5" />
+    <path className="signal-arc" d="M8.5 14.5a5 5 0 0 1 7 0" />
+    <path className="signal-arc signal-arc-2" d="M5.5 11.5a9.2 9.2 0 0 1 13 0" />
+    <path className="signal-arc signal-arc-3" d="M2.5 8.5a13.4 13.4 0 0 1 19 0" />
+  </Svg>
+);
