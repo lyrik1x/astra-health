@@ -1,9 +1,10 @@
 import { createInstance, type i18n as I18n } from "i18next";
 import { initReactI18next } from "react-i18next";
 import { en } from "./en";
+import { es } from "./es";
 import { DEFAULT_LANGUAGE, getBrowserStorage, loadLanguage, saveLanguage, type StorageLike } from "./language-storage";
 
-export const resources = { en: { translation: en } };
+export const resources = { en: { translation: en }, es: { translation: es } };
 
 function setDocumentLanguage(language: string): void {
   if (typeof document !== "undefined") {
