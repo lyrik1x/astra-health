@@ -1,5 +1,5 @@
 import Dexie from "dexie";
-import { MeasurementSchema, type Measurement } from "@astra/contracts";
+import { MeasurementSchema, type Measurement, type MeasurementWithTransmission, type Transmission } from "@astra/contracts";
 import { getShipDb, type ShipDb } from "../db/ship-db";
 import type { LocalMeasurementRecord, OutboxEntry } from "../db/schema";
 
@@ -68,6 +68,103 @@ export async function listMeasurementsLocal(
 export function toContractMeasurement(record: LocalMeasurementRecord): Measurement {
   const { syncState, localOrigin, savedAtReal, transmission, lastError, ...payload } = record;
   return MeasurementSchema.parse(payload);
+}
+
+/**
+ * T-203: the channel answered ACCEPTED or DUPLICATE. In ONE transaction the record goes to
+ * CONFIRMED with its transmission and ONLY its outbox entry is pruned. The record itself is kept.
+ */
+export async function markMeasurementConfirmed(
+  id: string,
+  transmission: Transmission,
+  db: ShipDb = getShipDb(),
+): Promise<void> {
+  await db.transaction("rw", db.measurements, db.outbox, async () => {
+    await db.measurements.update(id, { syncState: "CONFIRMED", transmission, lastError: undefined });
+    await db.outbox.delete(id);
+  });
+}
+
+/**
+ * T-203: permanent rejection (CONFLICT or non-retryable INVALID). The record and its outbox
+ * entry are kept; the error stays visible and the item is no longer sent automatically.
+ */
+export async function markMeasurementSyncError(id: string, lastError: string, db: ShipDb = getShipDb()): Promise<void> {
+  await db.measurements.update(id, { syncState: "SYNC_ERROR", lastError });
+}
+
+/** T-203: transient failure or retryable INVALID. Back to PENDING_SYNC with `attempts + 1`. */
+export async function markMeasurementPending(id: string, db: ShipDb = getShipDb()): Promise<void> {
+  await db.transaction("rw", db.measurements, db.outbox, async () => {
+    await db.measurements.update(id, { syncState: "PENDING_SYNC" });
+    await db.outbox
+      .where("id")
+      .equals(id)
+      .modify((entry) => {
+        entry.attempts += 1;
+      });
+  });
+}
+
+/** ADDED: new HYDRATED record. UPDATED: same payload, transmission refreshed. MISMATCH: untouched. */
+export type HydrateOutcome = "ADDED" | "UPDATED" | "MISMATCH";
+
+/**
+ * Inbound reception (D-22, T-203 §4.2). Never changes a local payload:
+ * - not stored locally: added as HYDRATED + CONFIRMED with its transmission;
+ * - stored with the SAME canonical payload: transmission updated, CONFIRMED, its outbox entry pruned;
+ * - stored with a DIFFERENT payload (e.g. a local record in SYNC_ERROR by CONFLICT): nothing changes.
+ * `realNow` is the savedAtReal of a hydrated record.
+ */
+export async function upsertHydratedMeasurement(
+  item: MeasurementWithTransmission,
+  realNow: Date,
+  db: ShipDb = getShipDb(),
+): Promise<HydrateOutcome> {
+  const incoming = MeasurementSchema.parse(item.measurement);
+  return db.transaction("rw", db.measurements, db.outbox, async () => {
+    const existing = await db.measurements.get(incoming.id);
+    if (existing === undefined) {
+      await db.measurements.add({
+        ...incoming,
+        syncState: "CONFIRMED",
+        localOrigin: "HYDRATED",
+        savedAtReal: realNow.toISOString(),
+        transmission: item.transmission,
+      });
+      return "ADDED";
+    }
+    if (canonicalJson(toContractMeasurement(existing)) !== canonicalJson(incoming)) {
+      return "MISMATCH";
+    }
+    await db.measurements.update(incoming.id, {
+      syncState: "CONFIRMED",
+      transmission: item.transmission,
+      lastError: undefined,
+    });
+    await db.outbox.delete(incoming.id);
+    return "UPDATED";
+  });
+}
+
+/**
+ * Keys sorted recursively, arrays keep their order: the same rule as the server
+ * (apps/api/src/common/canonical-json.ts), applied to payloads already parsed by MeasurementSchema.
+ */
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(sortKeys(value));
+}
+
+function sortKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortKeys);
+  if (value !== null && typeof value === "object") {
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) {
+      sorted[key] = sortKeys((value as Record<string, unknown>)[key]);
+    }
+    return sorted;
+  }
+  return value;
 }
 
 function compareMeasurements(a: LocalMeasurementRecord, b: LocalMeasurementRecord): number {
