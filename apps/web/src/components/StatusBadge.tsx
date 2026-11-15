@@ -49,13 +49,19 @@ export interface StatusBadgeProps {
   status: DisplayStatus;
   /** Only for SYNC_ERROR: the permanent rejection code to show. */
   errorCode?: RejectionCode;
+  /** Marks the error code as a sample (status legend), so it is not read as a real error. */
+  isExample?: boolean;
 }
 
-export function StatusBadge({ status, errorCode }: StatusBadgeProps) {
+export function StatusBadge({ status, errorCode, isExample = false }: StatusBadgeProps) {
   const { t } = useTranslation();
   const { labelKey, Icon, className } = STATUS_STYLES[status];
-  const label =
-    status === "SYNC_ERROR" && errorCode ? t("status.SYNC_ERROR_withCode", { code: errorCode }) : t(labelKey);
+  let label = t(labelKey);
+  if (status === "SYNC_ERROR" && errorCode) {
+    label = isExample
+      ? t("status.SYNC_ERROR_example", { code: errorCode })
+      : t("status.SYNC_ERROR_withCode", { code: errorCode });
+  }
 
   return (
     <span

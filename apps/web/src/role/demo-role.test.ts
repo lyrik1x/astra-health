@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_DEMO_ROLE, buildRoleSearch, resolveDemoRole } from "./demo-role";
+import { DEFAULT_DEMO_ROLE, buildRoleSearch, canonicalRoleSearch, resolveDemoRole } from "./demo-role";
 
 describe("resolveDemoRole", () => {
   it("reads ?role=ship as SHIP", () => {
@@ -25,5 +25,22 @@ describe("buildRoleSearch", () => {
   it("writes the role in lowercase and keeps other parameters", () => {
     expect(buildRoleSearch("?debug=1&role=ship", "EARTH")).toBe("?debug=1&role=earth");
     expect(buildRoleSearch("", "SHIP")).toBe("?role=ship");
+  });
+});
+
+describe("canonicalRoleSearch", () => {
+  it("rewrites an invalid role to the default role", () => {
+    expect(canonicalRoleSearch("?role=admin")).toBe("?role=ship");
+  });
+
+  it("keeps other parameters when rewriting", () => {
+    expect(canonicalRoleSearch("?debug=1&role=admin")).toBe("?debug=1&role=ship");
+  });
+
+  it("leaves valid or absent roles untouched", () => {
+    expect(canonicalRoleSearch("?role=ship")).toBeNull();
+    expect(canonicalRoleSearch("?role=earth")).toBeNull();
+    expect(canonicalRoleSearch("")).toBeNull();
+    expect(canonicalRoleSearch("?other=1")).toBeNull();
   });
 });
