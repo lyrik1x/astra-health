@@ -180,4 +180,33 @@ describe("evaluatePersonal", () => {
     expect(() => evaluatePersonal(target(80), frozen)).not.toThrow();
     expect(evaluatePersonal(target(80), frozen)).toEqual(expected);
   });
+
+  it("E21 (T-709): with equal capturedAtSim, capturedAtReal decides before id", () => {
+    const history = [hr(1, 20, { capturedAtSim: day(1), capturedAtReal: "2026-10-01T09:00:00.000Z" }),
+      hr(2, 1000, { capturedAtSim: day(1), capturedAtReal: day(1) }),
+      ...values([40, 50, 60, 70, 80, 90], 3)];
+    const result = evaluatePersonal(target(100), history);
+    expect(result.usedRecordIds).toEqual(ids([1, 3, 4, 5, 6, 7, 8]));
+    expect(result.components[0].median).toBe(60);
+  });
+
+  it("E22 (T-709): with both times equal, id decides regardless of input order", () => {
+    const history = [...values([40, 50, 60, 70, 80, 90], 3),
+      hr(2, 20, { capturedAtSim: day(1), capturedAtReal: day(1) }),
+      hr(1, 1000, { capturedAtSim: day(1), capturedAtReal: day(1) })].reverse();
+    const result = evaluatePersonal(target(100), history);
+    expect(result.usedRecordIds).toEqual(ids([2, 3, 4, 5, 6, 7, 8]));
+    expect(result.components[0].median).toBe(60);
+  });
+
+  it("E23 (T-709): orders ids by character code, so \"B\" < \"a\"", () => {
+    const upper = id("0B");
+    const lower = id("0a");
+    const history = [hr(1, 20, { id: lower, capturedAtSim: day(1), capturedAtReal: day(1) }),
+      hr(2, 1000, { id: upper, capturedAtSim: day(1), capturedAtReal: day(1) }),
+      ...values([40, 50, 60, 70, 80, 90], 3)];
+    const result = evaluatePersonal(target(100), history);
+    expect(result.usedRecordIds).toEqual([lower, ...ids([3, 4, 5, 6, 7, 8])]);
+    expect(result.components[0].median).toBe(60);
+  });
 });
