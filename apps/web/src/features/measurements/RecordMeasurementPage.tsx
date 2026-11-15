@@ -1,18 +1,30 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { CrewResponse, Indicator, MeasurementContext, MissionConfigResponse } from "@astra/contracts";
-import { CheckIcon, CrossCircleIcon, InfoIcon } from "../../components/icons";
+import type { Astronaut, Indicator, MeasurementContext } from "@astra/contracts";
+import { CrossCircleIcon, InfoIcon } from "../../components/icons";
+import { StatusBadge } from "../../components/StatusBadge";
 import { Button, Card } from "../../components/ui";
-// TEMPORAL: replace with fetchCrew / fetchMissionConfig from src/api/ when T-105 and T-502 are in main.
-import { loadCrew, loadMissionConfig } from "./dev-fixtures";
+import type { LocalMissionConfig } from "../../db/schema";
+import { getLocalCrew } from "../../local/crew-repo";
+import { LocalRecordExistsError, saveMeasurementLocal } from "../../local/measurements-repo";
+import { getLocalMissionConfig } from "../../local/mission-config-repo";
 import { validateMeasurementForm, type FieldErrors, type FieldName, type MeasurementFormValues } from "./form-validation";
 import { CONTEXTS, DEFAULT_CONTEXT, INDICATORS, MOOD_VALUES, getIndicatorDefinition } from "./indicators";
-import { saveMeasurement } from "./measurement-store";
 
 type LoadState =
   | { status: "loading" }
   | { status: "error" }
-  | { status: "ready"; crew: CrewResponse["crew"]; config: MissionConfigResponse };
+  /** Crew or mission config was never downloaded (no connection yet). */
+  | { status: "noMissionData" }
+  | { status: "ready"; crew: Astronaut[]; config: LocalMissionConfig };
+
+/** While there is no local mission data yet, the form checks again with this period. */
+const NO_DATA_RETRY_MS = 2_000;
+
+export interface RecordMeasurementPageProps {
+  /** Called after a successful local save; App.tsx asks the ship sync runner for a cycle. */
+  onSaved?: () => void;
+}
 
 const FIELD_IDS: Record<Exclude<FieldName, "form">, string> = {
   astronautId: "measurement-astronaut",
@@ -64,7 +76,7 @@ function emptyValues(astronautId: string, indicator: Indicator, context: Measure
   return { astronautId, indicator, context, valueText: "", systolicText: "", diastolicText: "", mood: null };
 }
 
-export function RecordMeasurementPage() {
+export function RecordMeasurementPage({ onSaved }: RecordMeasurementPageProps) {
   const { t } = useTranslation();
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [values, setValues] = useState<MeasurementFormValues>(emptyValues("", "HEART_RATE", DEFAULT_CONTEXT));
@@ -72,19 +84,31 @@ export function RecordMeasurementPage() {
   const [captured, setCaptured] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Local data only (downloaded by syncOnce). Without it, check again until the first sync lands.
   useEffect(() => {
     let active = true;
-    Promise.all([loadCrew(), loadMissionConfig()])
-      .then(([crewResponse, config]) => {
-        if (!active) return;
-        setLoad({ status: "ready", crew: crewResponse.crew, config });
-        setValues((current) => ({ ...current, astronautId: current.astronautId || (crewResponse.crew[0]?.id ?? "") }));
-      })
-      .catch(() => {
-        if (active) setLoad({ status: "error" });
-      });
+    let retry: number | undefined;
+    function loadLocal() {
+      Promise.all([getLocalCrew(), getLocalMissionConfig()])
+        .then(([crew, config]) => {
+          if (!active) return;
+          if (crew === null || config === null) {
+            setLoad({ status: "noMissionData" });
+            retry = window.setTimeout(loadLocal, NO_DATA_RETRY_MS);
+            return;
+          }
+          setLoad({ status: "ready", crew, config });
+          setValues((current) => ({ ...current, astronautId: current.astronautId || (crew[0]?.id ?? "") }));
+        })
+        .catch((error: unknown) => {
+          console.error("Could not read local mission data", error);
+          if (active) setLoad({ status: "error" });
+        });
+    }
+    loadLocal();
     return () => {
       active = false;
+      window.clearTimeout(retry);
     };
   }, []);
 
@@ -104,7 +128,9 @@ export function RecordMeasurementPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (load.status !== "ready" || saving) return;
-    const result = validateMeasurementForm(values, load.config, new Date(), () => crypto.randomUUID());
+    // The same instant is the capture time and the local save time (T-202 S3).
+    const realNow = new Date();
+    const result = validateMeasurementForm(values, load.config, realNow, () => crypto.randomUUID());
     if (!result.ok) {
       setErrors(result.errors);
       setCaptured(false);
@@ -114,12 +140,20 @@ export function RecordMeasurementPage() {
     }
     setSaving(true);
     try {
-      await saveMeasurement(result.measurement);
+      await saveMeasurementLocal(result.measurement, realNow);
       setErrors({});
       setValues(emptyValues(values.astronautId, values.indicator, values.context));
       setCaptured(true);
-    } catch {
-      setErrors({ form: "pages.recordMeasurement.errors.unexpected" });
+      onSaved?.();
+    } catch (error) {
+      // What was typed is kept, so the astronaut can try again.
+      console.error("Could not save the measurement on the device", error);
+      setErrors({
+        form:
+          error instanceof LocalRecordExistsError
+            ? "pages.recordMeasurement.errors.alreadySaved"
+            : "pages.recordMeasurement.errors.saveFailed",
+      });
     } finally {
       setSaving(false);
     }
@@ -140,16 +174,24 @@ export function RecordMeasurementPage() {
             <span>{t("pages.recordMeasurement.loadError")}</span>
           </p>
         )}
+        {load.status === "noMissionData" && (
+          <div className="flex flex-col gap-4">
+            <p className="flex items-center gap-1.5 text-sm text-fg-muted">
+              <InfoIcon className="size-4 shrink-0" />
+              <span>{t("pages.recordMeasurement.noMissionData")}</span>
+            </p>
+            <div>
+              <Button type="button" disabled>
+                {t("pages.recordMeasurement.submit")}
+              </Button>
+            </div>
+          </div>
+        )}
         {load.status === "ready" && load.crew.length === 0 && (
           <p className="text-sm text-fg-muted">{t("pages.recordMeasurement.noCrew")}</p>
         )}
         {load.status === "ready" && load.crew.length > 0 && (
           <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <p className="flex items-start gap-1.5 text-sm text-fg-muted">
-              <InfoIcon className="mt-0.5 size-4 shrink-0" />
-              <span>{t("pages.recordMeasurement.devDataNote")}</span>
-            </p>
-
             <div className="grid gap-4 md:grid-cols-2">
               <Field label={t("pages.recordMeasurement.astronaut")} htmlFor={FIELD_IDS.astronautId}>
                 <select
@@ -306,8 +348,8 @@ export function RecordMeasurementPage() {
 
             <div role="status" aria-live="polite">
               {captured && (
-                <p className="flex items-center gap-1.5 text-sm text-fg">
-                  <CheckIcon className="size-4 shrink-0" />
+                <p className="flex flex-wrap items-center gap-2 text-sm text-fg">
+                  <StatusBadge status="SAVED_LOCAL" />
                   <span>{t("pages.recordMeasurement.captured")}</span>
                 </p>
               )}

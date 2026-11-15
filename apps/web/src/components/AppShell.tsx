@@ -59,12 +59,14 @@ interface AppShellProps {
   activeSection: SectionId;
   onSelectSection: (section: SectionId) => void;
   mainRef: RefObject<HTMLElement | null>;
+  /** Optional link indicator next to the API status. App.tsx passes it only in the SHIP role. */
+  linkStatus?: ReactNode;
   children: ReactNode;
 }
 
 /** Responsive layout: sidebar on desktop, bottom tabs on mobile, permanent notices on top. */
 export function AppShell(props: AppShellProps) {
-  const { role, invalidRoleValue, sections, activeSection, onSelectSection, mainRef, children } = props;
+  const { role, invalidRoleValue, sections, activeSection, onSelectSection, mainRef, linkStatus, children } = props;
   const { t } = useTranslation();
   const roleName = t(`demoRole.${role}`);
   const RoleIcon = role === "SHIP" ? ShipIcon : EarthIcon;
@@ -92,6 +94,7 @@ export function AppShell(props: AppShellProps) {
               {t("demoRole.viewTag", { role: roleName })}
             </span>
             <ApiStatus />
+            {linkStatus}
           </div>
           <DemoRoleSwitch role={role} />
         </div>

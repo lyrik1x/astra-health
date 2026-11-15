@@ -3,6 +3,10 @@ export const en = {
   app: {
     name: "ASTRA HEALTH",
     skipToContent: "Skip to content",
+    link: {
+      label: "Link",
+      online: "Online",
+    },
   },
   banner: {
     label: "Prototype notices",
@@ -32,6 +36,14 @@ export const en = {
       title: "Dashboard",
       description: "Overview of the crew member's recent records and transmissions.",
       recordAction: "Record a measurement",
+      measurementsTitle: "Measurements",
+      loading: "Loading measurements saved on this device…",
+      loadError: "Could not read the measurements saved on this device. Reload the page to try again.",
+      empty: "No measurements for this crew member yet.",
+      capturedSim: "Captured (simulated): {{time}}",
+      capturedReal: "Real time: {{time}}",
+      statusLabel: "Status",
+      unknownContext: "Unknown context",
     },
     recordMeasurement: {
       title: "Record measurement",
@@ -50,8 +62,8 @@ export const en = {
       loading: "Loading crew and mission configuration…",
       loadError: "Could not load the crew or the mission configuration. Reload the page to try again.",
       noCrew: "No crew members are available.",
-      devDataNote: "Crew and mission clock use fictional development data until the API routes are integrated.",
-      captured: "Measurement captured. Device storage arrives in T-202.",
+      noMissionData: "Connect once to download mission data",
+      captured: "It will be sent automatically when the link is available.",
       indicators: {
         HEART_RATE: "Heart rate",
         BODY_TEMPERATURE: "Body temperature",
@@ -83,6 +95,8 @@ export const en = {
         mood: "Choose a value from 1 to 5",
         decimalComma: "Use a dot for decimals (36.6)",
         unexpected: "The measurement could not be built. Reload the page and try again.",
+        alreadySaved: "This measurement is already saved on the device. It was not overwritten.",
+        saveFailed: "The measurement could not be saved on the device. Your entry is kept; try again.",
       },
     },
     incident: {
