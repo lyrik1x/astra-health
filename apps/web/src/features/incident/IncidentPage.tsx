@@ -16,6 +16,7 @@ import {
   type LocalIncident,
 } from "../../local/incidents-repo";
 import { getLocalMissionConfig } from "../../local/mission-config-repo";
+import { loadSelectedAstronaut, resolveAstronautId, saveSelectedAstronaut } from "../../role/selected-astronaut";
 import { availableActions, completedStepIds, latestReviewId } from "./available-actions";
 import { GUIDE_VERSION } from "./guide-content";
 import { GuidePanel } from "./GuidePanel";
@@ -68,7 +69,7 @@ export function IncidentPage({ onChanged }: IncidentPageProps) {
       const started = generation.current;
       try {
         const [crew, config] = await Promise.all([getLocalCrew(), getLocalMissionConfig()]);
-        const astronautId = selectedId || crew?.[0]?.id || "";
+        const astronautId = selectedId || resolveAstronautId(loadSelectedAstronaut(), crew);
         const incident = astronautId ? await getOpenIncident(astronautId) : null;
         if (!active || busyRef.current || generation.current !== started) return;
         setSnapshot({ crew, config, incident, realNow: new Date() });
@@ -113,6 +114,7 @@ export function IncidentPage({ onChanged }: IncidentPageProps) {
 
   function selectAstronaut(astronautId: string) {
     setSelectedId(astronautId);
+    saveSelectedAstronaut(astronautId);
     setSnapshot((current) => (current === null ? null : { ...current, incident: null }));
     // The drafts belong to the previous crew member's incident.
     setNoteDraft("");

@@ -4,7 +4,9 @@ import type { DemoRole } from "@astra/contracts";
 export type SectionId = "dashboard" | "recordMeasurement" | "incident" | "messages" | "console";
 
 export const SECTIONS_BY_ROLE: Record<DemoRole, readonly SectionId[]> = {
-  SHIP: ["dashboard", "recordMeasurement", "incident", "messages"],
+  // T-605 (D-37): free messages are out of the MVP, so "messages" is not in the ship menu.
+  // MessagesPage.tsx and the "messages" section id are kept.
+  SHIP: ["dashboard", "recordMeasurement", "incident"],
   EARTH: ["console"],
 };
 

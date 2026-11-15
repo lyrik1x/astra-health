@@ -11,7 +11,9 @@ import { listMeasurementsLocal } from "../../local/measurements-repo";
 import { getLocalMissionConfig } from "../../local/mission-config-repo";
 import type { SectionId } from "../../navigation/sections";
 import { BodyMap } from "../body-map/BodyMap";
+import { loadSelectedAstronaut, resolveAstronautId, saveSelectedAstronaut } from "../../role/selected-astronaut";
 import { CONTEXTS, getIndicatorDefinition } from "../measurements/indicators";
+import { TrendCard } from "../trend/TrendCard";
 import { displayStatusFor } from "./display-status";
 import { formatMeasurementValue, formatUtcMinute } from "./format-value";
 
@@ -67,7 +69,7 @@ export function DashboardPage({ onNavigate }: { onNavigate: (section: SectionId)
     async function refresh() {
       try {
         const [crew, config] = await Promise.all([getLocalCrew(), getLocalMissionConfig()]);
-        const astronautId = selectedId || crew?.[0]?.id || "";
+        const astronautId = selectedId || resolveAstronautId(loadSelectedAstronaut(), crew);
         const records = astronautId ? await listMeasurementsLocal(astronautId) : [];
         if (!active) return;
         // Most recent first: listMeasurementsLocal returns oldest first.
@@ -122,7 +124,10 @@ export function DashboardPage({ onNavigate }: { onNavigate: (section: SectionId)
                 id="dashboard-astronaut"
                 className="min-h-11 w-full max-w-xs rounded-control border border-border bg-surface-raised px-3 text-fg"
                 value={selectedId}
-                onChange={(event) => setSelectedId(event.target.value)}
+                onChange={(event) => {
+                  setSelectedId(event.target.value);
+                  saveSelectedAstronaut(event.target.value);
+                }}
               >
                 {crew.map((astronaut) => (
                   <option key={astronaut.id} value={astronaut.id}>
@@ -144,6 +149,9 @@ export function DashboardPage({ onNavigate }: { onNavigate: (section: SectionId)
           </div>
         )}
       </Card>
+
+      {/* T-605: same 2 s read as the list above; the card never reads Dexie by itself. */}
+      {!loadFailed && data !== null && crew !== null && <TrendCard records={data.records} />}
 
       <StatusLegend />
     </div>
