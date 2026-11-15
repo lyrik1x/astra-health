@@ -164,6 +164,7 @@ Direct dependencies declared in the workspace `package.json` files. Licenses are
 | `dexie` | 4.4.7 | Apache-2.0 | web |
 | `i18next` | 26.7.2 | MIT | web |
 | `react-i18next` | 17.1.13 | MIT | web |
+| `motion` | 14.8.0 | MIT | web |
 | `vite` | 8.3.8 | MIT | web (dev) |
 | `@vitejs/plugin-react` | 6.3.0 | MIT | web (dev) |
 | `vite-plugin-pwa` | 2.0.0 | MIT | web (dev) |
